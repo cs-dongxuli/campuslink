@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>个人主页 · CampusLink</title>
+<link rel="stylesheet" href="assets/css/main.css">
+<style>
+  .pf-head { position: relative; overflow: hidden; padding: 0; }
+  .pf-cover { height: 150px; background: linear-gradient(120deg, #dfe7ff, #eef2ff 40%, #ffe9df 100%); position: relative; overflow: hidden; }
+  .pf-cover i { position: absolute; border-radius: 50%; filter: blur(2px); }
+  .pf-body { padding: 0 32px 28px; display: grid; grid-template-columns: auto 1fr auto; gap: 24px; align-items: start; position: relative; }
+  .pf-body > div { padding-top: 18px; }
+  .pf-body .avatar.xl { border: 5px solid #fff; box-shadow: var(--sh-2); margin-top: -48px; }
+  .pf-name { font-size: 28px; font-weight: 900; }
+  .pf-stats { display: grid; grid-template-columns: repeat(4, 1fr); border-top: 1px solid var(--line); }
+  .pf-stats > div { padding: 18px 24px; border-right: 1px solid var(--line); }
+  .pf-stats > div:last-child { border-right: 0; }
+  .pf-stats b { font-family: var(--font-num); font-size: 26px; font-weight: 800; }
+  .pf-stats span { display: block; font-size: 12px; color: var(--muted); }
+  .works { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
+  .svc-row { display: flex; align-items: center; gap: 12px; padding: 14px; border-radius: 14px; background: var(--bg); transition: .25s var(--ease); cursor: pointer; }
+  .svc-row:hover { background: var(--primary); color: #fff; transform: translateX(4px); }
+  .svc-row:hover .text-muted, .svc-row:hover .price, .svc-row:hover small { color: #fff !important; }
+  .svc-row .ic { width: 36px; height: 36px; border-radius: 10px; background: #fff; color: var(--primary); display: grid; place-items: center; flex: none; }
+  .svc-row .ic svg { width: 18px; height: 18px; }
+  .bar { height: 8px; border-radius: 8px; background: var(--line-2); overflow: hidden; }
+  .bar i { display: block; height: 100%; border-radius: 8px; background: linear-gradient(90deg, var(--primary-400), var(--primary)); width: 0; transition: width 1.2s var(--ease); }
+  .review { padding: 18px 0; border-bottom: 1px solid var(--line); }
+  .review:last-child { border-bottom: 0; }
+  .exp { display: flex; gap: 14px; }
+  .exp .ic { width: 42px; height: 42px; border-radius: 12px; background: var(--primary-50); color: var(--primary); display: grid; place-items: center; flex: none; }
+  .exp .ic svg { width: 20px; height: 20px; }
+  @media (max-width: 760px) { .pf-body { grid-template-columns: 1fr; } .pf-stats { grid-template-columns: 1fr 1fr; } }
+</style>
+</head>
+<body>
+<main class="page">
+  <div class="container" id="root"><div class="card skeleton" style="height:320px"></div></div>
+</main>
+<script src="assets/js/config.js"></script>
+<script src="assets/js/mock-data.js"></script>
+<script src="assets/js/api.js"></script>
+<script src="assets/js/ui.js"></script>
+<script>
+(async function () {
+  const U = CL.ui; const { $, $$, qs, icon, esc, avatar, cover, stars, timeAgo, fmtBudget, modeBadge, MODES, tabs, emptyState, modal, countUp } = U;
+  const me = await U.mountHeader({});
+  const uidp = qs('id') || me?.id;
+  if (!uidp) return (location.href = 'login.html');
+  let u; try { u = await CL.api.users.get(uidp); } catch (e) { $('#root').innerHTML = emptyState('user', '用户不存在'); return; }
+  const isMe = me && me.id === u.id;
+  const [works, reviews, posts] = await Promise.all([CL.api.portfolio.list(u.id), CL.api.users.reviews(u.id), CL.api.users.posts(u.id)]);
+  U.setTitle(u.name);
+
+  const dimAvg = (k) => reviews.length ? reviews.reduce((s, r) => s + (r.dims?.[k] || r.rating), 0) / reviews.length : 0;
+  const tagCount = {}; reviews.forEach((r) => (r.tags || []).forEach((t) => (tagCount[t] = (tagCount[t] || 0) + 1)));
+  const topTags = Object.entries(tagCount).sort((a, b) => b[1] - a[1]).slice(0, 8);
+
+  $('#root').innerHTML = `
+  <section class="card pf-head reveal">
+    <div class="pf-cover"><i style="width:240px;height:240px;left:-40px;top:-120px;background:#c9d6ff"></i><i style="width:180px;height:180px;right:12%;top:-60px;background:#ffd9cb"></i><i style="width:90px;height:90px;right:30%;bottom:-30px;background:#fff1c9"></i></div>
+    <div class="pf-body">
+      ${avatar(u, 'xl')}
+      <div style="padding-bottom:6px">
+        <div class="row gap-8 wrap"><h1 class="pf-name">${esc(u.name)}</h1>${u.verified ? `<span class="badge badge-mint">${icon('shieldCheck')}${u.verifiedType === 'tutor' ? '导师认证' : '学生认证'}</span>` : `<span class="badge badge-gray">未认证</span>`}</div>
+        <div class="text-muted mt-4 row gap-6 wrap">${icon('school', '').replace('<svg', '<svg style="width:16px;height:16px"')}${esc(u.school)} · ${esc(u.major)} · ${esc(u.grade)}<span>·</span><span class="dot" style="color:var(--mint)"></span>通常 ${esc(u.responseTime)}回复</div>
+        <p class="mt-12" style="max-width:640px;color:var(--ink-2)">${esc(u.bio || '这个人很神秘，还没有写简介。')}</p>
+        <div class="row gap-6 wrap mt-12">${(u.skills || []).map((s) => `<span class="tag tag-blue">${esc(s)}</span>`).join('')}</div>
+      </div>
+      <div class="row gap-8" style="padding-bottom:6px">
+        ${isMe ? `<a class="btn btn-ghost" href="profile-edit.html">${icon('edit')}编辑资料</a><a class="btn btn-primary" href="dashboard.html">${icon('grid')}我的工作台</a>` : `
+        <div class="dropdown" id="inviteDd"><button class="btn btn-primary">${icon('userPlus')}邀请合作${icon('chevronDown')}</button>
+          <div class="menu">${Object.values(MODES).map((m) => `<a href="publish.html?mode=${m.key}&invite=${u.id}">${icon(m.icon)}${m.name}<span class="text-xs text-muted" style="margin-left:auto">${m.desc}</span></a>`).join('')}</div></div>`}
+      </div>
+    </div>
+    <div class="pf-stats">
+      <div><b data-c="${u.stats.rating}" data-d="1">0</b><span>综合评分（${u.stats.ratingCount} 条）</span></div>
+      <div><b data-c="${u.stats.completed}">0</b><span>完成合作</span></div>
+      <div><b data-c="${u.stats.goodRate}" data-s="%">0</b><span>好评率</span></div>
+      <div><b data-c="${works.length}">0</b><span>作品</span></div>
+    </div>
+  </section>
+
+  <div class="layout-side mt-24">
+    <section>
+      <div class="tabs" id="pfTabs"><button data-tab="works" class="active">${icon('image')}作品集 <span class="cnt">${works.length}</span></button><button data-tab="reviews">${icon('star')}合作评价 <span class="cnt">${reviews.length}</span></button><button data-tab="resume">${icon('award')}履历</button><button data-tab="posts">${icon('file')}发布的需求 <span class="cnt">${posts.length}</span></button></div>
+      <div class="mt-16" id="pane"></div>
+    </section>
+    <aside class="col gap-16 sticky">
+      <div class="card card-pad reveal" style="--d:.1s">
+        <div class="section-title"><h3>${icon('bag')}${isMe ? '我' : 'TA'}可以提供</h3></div>
+        <div class="col gap-8">${(u.services || []).length ? u.services.map((s) => `<a class="svc-row" href="${isMe ? 'profile-edit.html' : `publish.html?mode=${s.mode}&invite=${u.id}`}"><span class="ic">${icon({ teach: 'chat', help: 'bag', together: 'users' }[s.mode])}</span><div class="grow"><div class="fw-700 text-sm">${esc(s.title)}</div><div class="text-xs text-muted">${MODES[s.mode].name}</div></div><div style="text-align:right">${fmtBudget(s.price).replace('class="price', 'class="price text-sm')}<small class="text-xs text-muted">${esc(s.unit || '')}</small></div></a>`).join('') : `<p class="text-sm text-muted">${isMe ? '还没有添加服务，<a class="text-primary" href="profile-edit.html">去添加</a>' : '暂未公开服务，可直接邀请合作'}</p>`}</div>
+      </div>
+      <div class="card card-pad reveal" style="--d:.18s">
+        <div class="section-title"><h3>${icon('shieldCheck')}合作信用</h3><span class="row gap-4">${stars(u.stats.rating)}<b class="num">${u.stats.rating.toFixed(1)}</b></span></div>
+        ${[['quality', '交付质量'], ['communication', '沟通配合'], ['punctuality', '按时守约']].map(([k, n]) => { const v = dimAvg(k); return `<div class="mt-12"><div class="row-between text-sm"><span class="text-muted">${n}</span><b class="num">${v ? v.toFixed(1) : '-'}</b></div><div class="bar mt-4"><i data-w="${(v / 5) * 100}"></i></div></div>`; }).join('')}
+        ${topTags.length ? `<div class="row gap-6 wrap mt-16">${topTags.map(([t, c]) => `<span class="tag tag-sm">${esc(t)} <b class="text-primary">${c}</b></span>`).join('')}</div>` : ''}
+      </div>
+    </aside>
+  </div>`;
+
+  const P = {
+    works: () => works.length ? `<div class="works stagger">${works.map((w) => `<div class="work-card" data-w="${w.id}"><div class="cover">${w.coverUrl ? `<img src="${esc(w.coverUrl)}" style="width:100%;height:100%;object-fit:cover">` : cover(w.coverKind, w.coverSeed)}</div><div class="body"><div class="fw-700 ellipsis">${esc(w.title)}</div><div class="row gap-6 mt-8">${(w.tags || []).slice(0, 2).map((t) => `<span class="tag tag-sm">${esc(t)}</span>`).join('')}</div></div></div>`).join('')}</div>` : `<div class="card">${emptyState('image', '还没有作品', isMe ? '上传作品，让别人更快认识你' : '', isMe ? '<a class="btn btn-primary" href="profile-edit.html#works">添加作品</a>' : '')}</div>`,
+    reviews: () => `<div class="card card-pad">${reviews.length ? reviews.map((r) => `<div class="review"><div class="row">${avatar(r.reviewer, 'sm')}<div class="grow"><b class="text-sm">${esc(r.reviewer?.name)}</b><div class="text-xs text-muted">${timeAgo(r.createdAt)}</div></div>${stars(r.rating)}</div><p class="mt-12">${esc(r.content)}</p><div class="row gap-6 wrap mt-8">${(r.tags || []).map((t) => `<span class="tag tag-sm">${esc(t)}</span>`).join('')}</div></div>`).join('') : emptyState('star', '还没有评价', '完成合作后，双方可以互相评价')}</div>`,
+    resume: () => `<div class="card card-pad col gap-24">
+      <div><div class="section-title"><h3>${icon('help')}经历</h3></div>${(u.experiences || []).length ? `<div class="col gap-16">${u.experiences.map((e) => `<div class="exp"><span class="ic">${icon('help')}</span><div><b>${esc(e.title)}</b><div class="text-sm text-muted">${esc(e.org)} · ${esc(e.period)}</div><p class="text-sm mt-4">${esc(e.desc)}</p></div></div>`).join('')}</div>` : '<p class="text-muted text-sm">暂无</p>'}</div>
+      <div><div class="section-title"><h3>${icon('trophy')}获奖与证书</h3></div>${(u.awards || []).length ? `<div class="col gap-8">${u.awards.map((a) => `<div class="row"><span class="badge badge-amber">${esc(a.year)}</span>${esc(a.title)}</div>`).join('')}</div>` : '<p class="text-muted text-sm">暂无</p>'}</div>
+      ${(u.links || []).length ? `<div><div class="section-title"><h3>${icon('link')}外部链接</h3></div><div class="row gap-8 wrap">${u.links.map((l) => `<a class="tag tag-outline" href="${esc(l.url)}" target="_blank">${icon('link')}${esc(l.label)}</a>`).join('')}</div></div>` : ''}
+    </div>`,
+    posts: () => posts.length ? `<div class="grid grid-2 stagger">${posts.map(U.postCard).join('')}</div>` : `<div class="card">${emptyState('file', '暂无公开需求')}</div>`,
+  };
+  const show = (k) => { $('#pane').innerHTML = P[k](); bindWorks(); };
+  tabs($('#pfTabs'), show); show('works');
+
+  function bindWorks() {
+    $$('[data-w]', $('#pane')).forEach((c) => (c.onclick = () => {
+      const w = works.find((x) => x.id === c.dataset.w);
+      modal({ size: 'lg', body: `<div style="border-radius:16px;overflow:hidden;aspect-ratio:16/9">${w.coverUrl ? `<img src="${esc(w.coverUrl)}" style="width:100%;height:100%;object-fit:cover">` : cover(w.coverKind, w.coverSeed)}</div><div class="row-between mt-16"><h3 class="h3">${esc(w.title)}</h3><button class="icon-btn" data-close>${icon('x')}</button></div><p class="text-muted mt-8">${esc(w.description)}</p><div class="row gap-6 mt-12">${(w.tags || []).map((t) => `<span class="tag tag-sm">${esc(t)}</span>`).join('')}${w.link ? `<a class="btn btn-soft btn-sm" style="margin-left:auto" href="${esc(w.link)}" target="_blank">${icon('link')}查看链接</a>` : ''}</div>` });
+    }));
+  }
+  // 下拉
+  const dd = $('#inviteDd'); if (dd) { dd.firstElementChild.onclick = (e) => { e.stopPropagation(); dd.classList.toggle('open'); }; }
+  U.reveal();
+  $$('[data-c]').forEach((n) => countUp(n, +n.dataset.c, { decimals: +n.dataset.d || 0, suffix: n.dataset.s || '' }));
+  setTimeout(() => $$('.bar i').forEach((b) => (b.style.width = b.dataset.w + '%')), 300);
+  U.mountFooter();
+})();
+</script>
+</body>
+</html>

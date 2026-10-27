@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>登录 · CampusLink</title>
+<link rel="stylesheet" href="assets/css/main.css">
+<style>
+  .auth { min-height: 100vh; display: grid; grid-template-columns: 1.05fr 1fr; }
+  .auth-art { position: relative; overflow: hidden; padding: 48px 56px; display: flex; flex-direction: column; background: linear-gradient(150deg, #1a39bf, #2f5bff 60%, #5b7fff); color: #fff; }
+  .auth-art .logo b { color: #cfe0ff; }
+  .auth-art h1 { margin-top: auto; font-size: 46px; line-height: 1.2; font-weight: 900; }
+  .auth-art h1 .hl::after { background: rgba(255, 212, 92, .9); }
+  .auth-art p { color: rgba(255,255,255,.8); margin-top: 16px; font-size: 16px; max-width: 420px; }
+  .orbit { position: absolute; right: -140px; top: 90px; width: 560px; height: 560px; }
+  .orbit .o { position: absolute; inset: 0; border-radius: 50%; border: 1.5px dashed rgba(255,255,255,.22); animation: spin 60s linear infinite; }
+  .orbit .o:nth-child(2) { inset: 80px; animation-duration: 40s; animation-direction: reverse; }
+  .orbit .o:nth-child(3) { inset: 160px; animation-duration: 28s; }
+  .orbit .o span { position: absolute; top: -20px; left: calc(50% - 20px); width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; font-weight: 800; box-shadow: 0 8px 20px rgba(0,0,0,.18); }
+  .orbit .o span.b { top: auto; bottom: -20px; }
+  .orbit .core { position: absolute; inset: 230px; border-radius: 50%; background: rgba(255,255,255,.14); display: grid; place-items: center; backdrop-filter: blur(6px); }
+  .orbit .core svg { width: 52px; height: 52px; }
+  .quote { margin-top: 40px; padding: 18px 20px; border-radius: 18px; background: rgba(255,255,255,.12); backdrop-filter: blur(8px); max-width: 440px; display: flex; gap: 14px; align-items: center; font-size: 14px; }
+  .auth-form { display: grid; place-items: center; padding: 40px 24px; }
+  .auth-card { width: min(440px, 100%); padding: 36px; }
+  .code-row { display: grid; grid-template-columns: 1fr 120px; gap: 10px; }
+  .demo-hint { margin-top: 20px; padding: 12px 14px; border-radius: 12px; background: var(--primary-50); color: var(--primary-700); font-size: 12.5px; }
+  .demo-hint button { color: var(--primary); font-weight: 700; text-decoration: underline; margin-right: 8px; }
+  @media (max-width: 900px) { .auth { grid-template-columns: 1fr; } .auth-art { display: none; } }
+</style>
+</head>
+<body>
+<div class="auth">
+  <aside class="auth-art">
+    <a class="logo" href="index.html" data-logo style="color:#fff"></a>
+    <div class="orbit">
+      <div class="o"><span style="background:#ffd45c;color:#7a5600">教</span><span class="b" style="background:#fff;color:var(--primary)">林</span></div>
+      <div class="o"><span style="background:#ff6b4a">帮</span><span class="b" style="background:#1fb985">周</span></div>
+      <div class="o"><span style="background:#a493ff">一</span></div>
+      <div class="core"><svg viewBox="0 0 40 40" fill="none"><circle cx="15" cy="20" r="9" stroke="#fff" stroke-width="4"/><circle cx="25" cy="20" r="9" stroke="#ffb3a1" stroke-width="4"/></svg></div>
+    </div>
+    <h1>让能力，<br>被<span class="hl">需要的人</span>看见</h1>
+    <p>用学校邮箱注册，只和真实的同学合作。教我做、帮我做、一起做——从这里开始。</p>
+    <div class="quote"><span class="avatar md" style="--c1:#6f8dff;--c2:#2f5bff">陈</span><div>“在这里接了 38 单设计，作品集也越做越厚。”<div class="text-xs mt-4" style="opacity:.7">陈一然 · 交互设计 大三</div></div></div>
+  </aside>
+
+  <main class="auth-form">
+    <div class="card auth-card reveal-scale">
+      <div class="tabs" id="authTabs" style="width:100%;display:flex"><button data-tab="login" class="active" style="flex:1;justify-content:center">登录</button><button data-tab="register" style="flex:1;justify-content:center">注册</button></div>
+      <h2 class="h2 mt-24" id="authTitle">欢迎回来 👋</h2>
+      <p class="text-muted mt-4" id="authSub">使用学校邮箱验证码登录</p>
+      <form id="authForm" class="col gap-16 mt-24" novalidate>
+        <div class="field"><label>学校邮箱</label><div class="input-group"><span data-ic="mail"></span><input class="input" name="email" type="email" placeholder="name@xxx.edu.cn" required></div></div>
+        <div class="field"><label>验证码</label><div class="code-row"><input class="input" name="code" inputmode="numeric" maxlength="6" placeholder="6 位验证码"><button type="button" class="btn btn-soft" id="sendCode">获取验证码</button></div></div>
+        <div id="regFields" class="col gap-16 hidden">
+          <div class="field"><label>昵称 / 姓名 <span class="req">*</span></label><input class="input" name="name" placeholder="同学们会看到这个名字"></div>
+          <div class="form-grid" style="gap:12px">
+            <div class="field"><label>学校</label><input class="input" name="school" placeholder="南湖大学"></div>
+            <div class="field"><label>年级</label><select class="select" name="grade"><option>大一</option><option>大二</option><option>大三</option><option>大四</option><option>研一</option><option>研二</option><option>研三</option><option>博士</option><option>教师</option></select></div>
+            <div class="field full"><label>专业</label><input class="input" name="major" placeholder="如：交互设计"></div>
+          </div>
+          <label class="row text-sm text-muted"><input type="checkbox" name="agree"> 我已阅读并同意《平台规则》与《隐私政策》</label>
+        </div>
+        <button class="btn btn-primary btn-lg btn-block mt-8" id="submitBtn">登录</button>
+      </form>
+      <div class="demo-hint" id="demoHint">演示模式：任意 6 位数字即可作为验证码。快速登录：
+        <div class="mt-8"><button data-email="linzx@nhu.edu.cn">林知夏</button><button data-email="chenyr@nhu.edu.cn">陈一然</button><button data-email="zhouzh@nhu.edu.cn">周子航</button></div></div>
+    </div>
+  </main>
+</div>
+<script src="assets/js/config.js"></script>
+<script src="assets/js/mock-data.js"></script>
+<script src="assets/js/api.js"></script>
+<script src="assets/js/ui.js"></script>
+<script>
+(function () {
+  const { $, $$, toast, tabs, qs, reveal, hydrate } = CL.ui;
+  CL.ui.mountMesh(); hydrate(); reveal();
+  if (!CL_CONFIG.USE_MOCK) $('#demoHint').remove();
+  let mode = qs('register') ? 'register' : 'login';
+  const f = $('#authForm');
+  const setMode = (m) => {
+    mode = m;
+    $('#regFields').classList.toggle('hidden', m !== 'register');
+    $('#authTitle').textContent = m === 'login' ? '欢迎回来 👋' : '加入 CampusLink';
+    $('#authSub').textContent = m === 'login' ? '使用学校邮箱验证码登录' : '学校邮箱即身份认证，注册后可完善作品集';
+    $('#submitBtn').textContent = m === 'login' ? '登录' : '注册并登录';
+  };
+  const t = tabs($('#authTabs'), setMode);
+  if (mode === 'register') { t.set('register', false); setMode('register'); }
+
+  let timer = 0;
+  $('#sendCode').onclick = async (e) => {
+    const email = f.email.value.trim(); if (!email) return toast('请输入学校邮箱', 'error');
+    const b = e.currentTarget; b.disabled = true;
+    try { await CL.api.auth.sendCode(email); toast('验证码已发送'); let s = 60; b.textContent = s + 's'; timer = setInterval(() => { s--; b.textContent = s + 's'; if (!s) { clearInterval(timer); b.disabled = false; b.textContent = '重新获取'; } }, 1000); }
+    catch (err) { toast(err.message, 'error'); b.disabled = false; }
+  };
+  f.onsubmit = async (e) => {
+    e.preventDefault();
+    const d = Object.fromEntries(new FormData(f));
+    const btn = $('#submitBtn'); btn.disabled = true;
+    try {
+      if (mode === 'login') await CL.api.auth.login({ email: d.email.trim(), code: d.code.trim() });
+      else {
+        if (!d.name) throw new Error('请填写昵称'); if (!d.agree) throw new Error('请先同意平台规则');
+        await CL.api.auth.register({ email: d.email.trim(), code: d.code.trim(), name: d.name, school: d.school, major: d.major, grade: d.grade });
+      }
+      toast(mode === 'login' ? '登录成功' : '注册成功');
+      setTimeout(() => (location.href = qs('next') || (mode === 'register' ? 'profile-edit.html' : 'explore.html')), 500);
+    } catch (err) { toast(err.message, 'error'); btn.disabled = false; }
+  };
+  $$('[data-email]').forEach((b) => (b.onclick = () => { f.email.value = b.dataset.email; f.code.value = '123456'; if (mode !== 'login') { t.set('login'); } f.requestSubmit(); }));
+})();
+</script>
+</body>
+</html>

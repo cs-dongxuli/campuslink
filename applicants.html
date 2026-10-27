@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>管理申请 · CampusLink</title>
+<link rel="stylesheet" href="assets/css/main.css">
+<style>
+  .ap-layout { display: grid; grid-template-columns: 360px minmax(0, 1fr); gap: 22px; align-items: start; }
+  .ap-list { display: flex; flex-direction: column; gap: 10px; }
+  .ap-item { padding: 16px; cursor: pointer; border: 2px solid transparent; transition: .25s var(--ease); }
+  .ap-item:hover { transform: translateX(3px); }
+  .ap-item.on { border-color: var(--primary); box-shadow: 0 0 0 4px var(--primary-50), var(--sh-2); }
+  .ap-detail { padding: 0; overflow: hidden; }
+  .ap-top { padding: 26px 28px; background: linear-gradient(120deg, var(--primary-50), #fff 70%); border-bottom: 1px solid var(--line); }
+  .ap-sec { padding: 22px 28px; border-bottom: 1px solid var(--line-2); }
+  .ap-sec:last-child { border-bottom: 0; }
+  .ap-sec h4 { font-size: 14px; font-weight: 700; margin-bottom: 12px; display: flex; gap: 8px; align-items: center; }
+  .ap-sec h4 svg { width: 17px; height: 17px; color: var(--primary); }
+  .msg-box { padding: 16px 18px; border-radius: 16px; background: var(--bg); position: relative; line-height: 1.8; }
+  .msg-box::before { content: "“"; position: absolute; left: 10px; top: -14px; font-size: 48px; color: var(--primary-200); font-family: Georgia, serif; }
+  .ap-actions { position: sticky; bottom: 0; padding: 16px 28px; background: rgba(255,255,255,.92); backdrop-filter: blur(10px); border-top: 1px solid var(--line); display: flex; gap: 10px; justify-content: flex-end; align-items: center; }
+  .mini-works { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .match-ring { width: 64px; height: 64px; position: relative; display: grid; place-items: center; }
+  .match-ring svg { position: absolute; inset: 0; transform: rotate(-90deg); }
+  .match-ring b { font-family: var(--font-num); font-size: 16px; color: var(--mint); }
+  .skill-hit { background: var(--mint-bg); color: #0f9a6c; }
+  @media (max-width: 1000px) { .ap-layout { grid-template-columns: 1fr; } .mini-works { grid-template-columns: 1fr 1fr; } }
+</style>
+</head>
+<body>
+<main class="page">
+  <div class="container">
+    <div class="breadcrumb"><a href="dashboard.html?tab=posts">我发布的</a><span data-ic="chevronRight"></span><span>管理申请</span></div>
+    <div class="row-between wrap mb-24" id="head"></div>
+    <div class="ap-layout">
+      <section><div class="tabs mb-16" id="fTabs" style="display:flex"><button data-tab="pending" class="active" style="flex:1;justify-content:center">待处理</button><button data-tab="accepted" style="flex:1;justify-content:center">已录用</button><button data-tab="rejected" style="flex:1;justify-content:center">未录用</button></div><div class="ap-list" id="list"></div></section>
+      <section class="card ap-detail sticky" id="detail" style="max-height:calc(100vh - 110px);overflow:auto"></section>
+    </div>
+  </div>
+</main>
+<script src="assets/js/config.js"></script>
+<script src="assets/js/mock-data.js"></script>
+<script src="assets/js/api.js"></script>
+<script src="assets/js/ui.js"></script>
+<script>
+(async function () {
+  const U = CL.ui; const { $, $$, qs, icon, esc, avatar, modeBadge, statusBadge, timeAgo, cover, stars, toast, modal, tabs, emptyState } = U;
+  await U.mountHeader({});
+  const me = await U.requireLogin();
+  U.hydrate();
+  const pid = qs('post');
+  const post = await CL.api.posts.get(pid);
+  if (!post.isOwner) { $('.ap-layout').innerHTML = emptyState('lock', '只有发起人可以查看申请'); return; }
+  let apps = await CL.api.applications.listForPost(pid);
+  let filter = 'pending', selId = null;
+  U.setTitle('管理申请');
+  $('#head').innerHTML = `<div><div class="row gap-8">${modeBadge(post.mode)}${statusBadge('post', post.status)}</div><h1 class="h2 mt-8">${esc(post.title)}</h1><p class="text-muted text-sm mt-4">查看申请者的履历、作品与评价，选择最合适的人。录用后将自动生成合作单。</p></div><a class="btn btn-ghost" href="post.html?id=${post.id}">${icon('eye')}查看需求</a>`;
+
+  const tagsLower = (post.tags || []).map((t) => t.toLowerCase());
+  const matchScore = (a) => { const s = a.applicant.skills || []; if (!tagsLower.length) return null; const hit = s.filter((x) => tagsLower.some((t) => x.toLowerCase().includes(t) || t.includes(x.toLowerCase()))).length; return Math.min(99, Math.round(55 + (hit / Math.max(1, tagsLower.length)) * 30 + a.applicant.stats.rating * 2 + Math.min(10, a.portfolio.length * 4))); };
+
+  function renderList() {
+    const list = apps.filter((a) => a.status === filter);
+    $$('#fTabs button').forEach((b) => { const n = apps.filter((a) => a.status === b.dataset.tab).length; b.innerHTML = `${{ pending: '待处理', accepted: '已录用', rejected: '未录用' }[b.dataset.tab]} <span class="cnt">${n}</span>`; });
+    if (!list.find((a) => a.id === selId)) selId = list[0]?.id || null;
+    $('#list').innerHTML = list.length ? list.map((a) => { const s = matchScore(a); return `<div class="card ap-item ${a.id === selId ? 'on' : ''}" data-id="${a.id}">
+      <div class="row">${avatar(a.applicant, 'md')}<div class="grow"><div class="row gap-6"><b>${esc(a.applicant.name)}</b>${a.role ? `<span class="tag tag-sm tag-blue">${esc(a.role)}</span>` : ''}</div><div class="text-xs text-muted ellipsis">${esc(a.applicant.major)} · ${esc(a.applicant.grade)}</div></div>${s ? `<span class="badge badge-mint">${s}% 匹配</span>` : ''}</div>
+      <p class="text-sm text-muted clamp-2 mt-12">${esc(a.message)}</p>
+      <div class="row-between mt-12 text-xs text-muted"><span class="row gap-4">${stars(a.applicant.stats.rating)}${a.applicant.stats.rating.toFixed(1)} · ${a.applicant.stats.completed} 次合作</span><span>${a.quote ? `<b class="num" style="color:var(--ink);font-size:14px">¥${a.quote.amount}</b>` : ''} ${timeAgo(a.createdAt)}</span></div></div>`; }).join('') : `<div class="card">${emptyState('inbox', '这里空空的', filter === 'pending' ? '新的申请会在这里出现' : '')}</div>`;
+    $$('.ap-item').forEach((n) => (n.onclick = () => { selId = n.dataset.id; renderList(); }));
+    dispatchEvent(new Event('resize'));
+    renderDetail();
+  }
+
+  function renderDetail() {
+    const a = apps.find((x) => x.id === selId);
+    if (!a) { $('#detail').innerHTML = emptyState('user', '选择左侧的申请者查看履历'); return; }
+    const u = a.applicant; const s = matchScore(a);
+    const hits = (u.skills || []).map((x) => ({ x, hit: tagsLower.some((t) => x.toLowerCase().includes(t) || t.includes(x.toLowerCase())) }));
+    $('#detail').innerHTML = `
+      <div class="ap-top"><div class="row gap-16">${avatar(u, 'lg')}<div class="grow"><div class="row gap-8"><h2 class="h2">${esc(u.name)}</h2>${u.verified ? `<span class="badge badge-mint">${icon('shieldCheck')}${u.verifiedType === 'tutor' ? '导师认证' : '学生认证'}</span>` : ''}${statusBadge('application', a.status)}</div><div class="text-sm text-muted mt-4">${esc(u.school)} · ${esc(u.major)} · ${esc(u.grade)} · 通常 ${esc(u.responseTime)}回复</div></div>
+        ${s ? `<div class="match-ring"><svg viewBox="0 0 64 64"><circle cx="32" cy="32" r="27" fill="none" stroke="#e3f7ef" stroke-width="6"/><circle cx="32" cy="32" r="27" fill="none" stroke="#1fb985" stroke-width="6" stroke-linecap="round" stroke-dasharray="170" stroke-dashoffset="${170 * (1 - s / 100)}"/></svg><b>${s}%</b></div>` : ''}</div>
+        <div class="stat-row mt-20" style="margin-top:20px"><div class="stat"><b>${u.stats.rating.toFixed(1)}</b><span>综合评分</span></div><div class="stat"><b>${u.stats.completed}</b><span>完成合作</span></div><div class="stat"><b>${u.stats.goodRate}%</b><span>好评率</span></div><div class="stat"><b>${u.stats.works}</b><span>作品</span></div></div></div>
+      <div class="ap-sec"><h4>${icon('chat')}申请留言</h4><div class="msg-box">${esc(a.message)}</div>
+        <div class="grid grid-3 mt-16" style="gap:12px">${a.role ? `<div class="card-pad-sm" style="background:var(--bg);border-radius:12px"><div class="text-xs text-muted">申请角色</div><b>${esc(a.role)}</b></div>` : ''}<div class="card-pad-sm" style="background:var(--bg);border-radius:12px"><div class="text-xs text-muted">报价</div><b>${a.quote ? `¥${a.quote.amount}${a.quote.type === 'hourly' ? '/小时' : a.quote.type === 'per_session' ? '/次' : ''}` : '接受预算'}</b></div><div class="card-pad-sm" style="background:var(--bg);border-radius:12px"><div class="text-xs text-muted">可投入时间</div><b>${esc(a.availableTime || '—')}</b></div></div></div>
+      <div class="ap-sec"><h4>${icon('target')}技能 <span class="text-xs text-muted" style="font-weight:500">绿色为与需求标签匹配</span></h4><div class="row gap-6 wrap">${hits.map(({ x, hit }) => `<span class="tag ${hit ? 'skill-hit' : ''}">${hit ? icon('check') : ''}${esc(x)}</span>`).join('')}</div></div>
+      <div class="ap-sec"><h4>${icon('image')}附上的作品</h4>${a.portfolio.length ? `<div class="mini-works">${a.portfolio.map((w) => `<div class="work-card"><div class="cover">${w.coverUrl ? `<img src="${esc(w.coverUrl)}" style="width:100%;height:100%;object-fit:cover">` : cover(w.coverKind, w.coverSeed)}</div><div class="body"><div class="fw-700 text-sm ellipsis">${esc(w.title)}</div><div class="text-xs text-muted clamp-2">${esc(w.description)}</div></div></div>`).join('')}</div>` : '<p class="text-sm text-muted">未附作品</p>'}</div>
+      <div class="ap-sec"><h4>${icon('award')}经历与获奖</h4>${(u.experiences || []).map((e) => `<div class="mb-8"><b class="text-sm">${esc(e.title)}</b><span class="text-xs text-muted"> · ${esc(e.org)} · ${esc(e.period)}</span><p class="text-sm text-muted">${esc(e.desc)}</p></div>`).join('') || ''}${(u.awards || []).map((x) => `<div class="row text-sm mt-8"><span class="badge badge-amber">${esc(x.year)}</span>${esc(x.title)}</div>`).join('')}${!(u.experiences || []).length && !(u.awards || []).length ? '<p class="text-sm text-muted">暂无</p>' : ''}</div>
+      <div class="ap-sec"><h4>${icon('star')}最近的合作评价</h4>${a.recentReviews.length ? a.recentReviews.map((r) => `<div class="mb-16"><div class="row gap-8">${avatar(r.reviewer, 'xs')}<b class="text-sm">${esc(r.reviewer.name)}</b>${stars(r.rating)}</div><p class="text-sm mt-4">${esc(r.content)}</p></div>`).join('') : '<p class="text-sm text-muted">暂无评价</p>'}</div>
+      <div class="ap-actions"><a class="btn btn-text" href="profile.html?id=${u.id}" target="_blank">${icon('user')}完整主页</a><span class="grow"></span>
+        ${a.status === 'pending' ? `<button class="btn btn-ghost" id="rejectBtn">婉拒</button><button class="btn btn-primary" id="acceptBtn">${icon('check')}录用${post.mode === 'together' ? '为队友' : ''}</button>` : a.status === 'accepted' ? `<a class="btn btn-primary" href="#" id="goCollab">${icon('clipboard')}去合作单</a>` : '<span class="text-sm text-muted">已婉拒</span>'}</div>`;
+    $('#acceptBtn')?.addEventListener('click', async () => {
+      const ok = await U.confirmDialog({ title: `录用 ${esc(u.name)}？`, text: post.mode === 'together' ? '录用后 TA 将加入团队合作单；所有角色招满后需求会自动停止招募。' : '录用后将生成合作单，其余待处理的申请会自动收到“未录用”通知。', okText: '确认录用' });
+      if (!ok) return;
+      const { collabId } = await CL.api.applications.accept(a.id);
+      celebrate(); toast('已录用！接下来请确认合作单');
+      setTimeout(() => (location.href = 'confirm.html?id=' + collabId), 1200);
+    });
+    $('#rejectBtn')?.addEventListener('click', () => {
+      const m = modal({ title: '婉拒申请', sub: '对方会收到通知。给一个理由会更友好（可选）。', body: `<div class="choice-group mb-16">${['已找到更合适的人选', '时间安排不匹配', '技能方向不太符合', '报价超出预算'].map((r, i) => `<label class="choice"><input type="radio" name="rr" value="${r}" ${i ? '' : 'checked'}><span>${r}</span></label>`).join('')}</div><textarea class="textarea" id="rrText" placeholder="补充说明（可选）"></textarea>`, foot: `<button class="btn btn-ghost" data-close>取消</button><button class="btn btn-dark" id="rrOk">确认婉拒</button>` });
+      m.$('#rrOk').onclick = async () => { const reason = [m.$('input[name=rr]:checked')?.value, m.$('#rrText').value].filter(Boolean).join('：'); await CL.api.applications.reject(a.id, reason); m.close(); toast('已婉拒'); apps = await CL.api.applications.listForPost(pid); renderList(); };
+    });
+    $('#goCollab')?.addEventListener('click', async (e) => { e.preventDefault(); const p = await CL.api.posts.get(pid); location.href = 'confirm.html?id=' + p.myCollabId; });
+  }
+
+  function celebrate() {
+    const colors = ['#2f5bff', '#ff6b4a', '#ffd45c', '#1fb985', '#6a57ff'];
+    for (let i = 0; i < 60; i++) {
+      const s = document.createElement('i');
+      s.style.cssText = `position:fixed;z-index:300;left:50%;top:45%;width:${6 + Math.random() * 6}px;height:${8 + Math.random() * 8}px;background:${colors[i % 5]};border-radius:2px;pointer-events:none;transition:transform 1.1s cubic-bezier(.2,.8,.2,1),opacity 1.1s;`;
+      document.body.appendChild(s);
+      requestAnimationFrame(() => { s.style.transform = `translate(${(Math.random() - 0.5) * 700}px, ${(Math.random() - 0.7) * 500}px) rotate(${Math.random() * 720}deg)`; s.style.opacity = 0; });
+      setTimeout(() => s.remove(), 1200);
+    }
+  }
+
+  tabs($('#fTabs'), (k) => { filter = k; renderList(); });
+  renderList();
+})();
+</script>
+</body>
+</html>

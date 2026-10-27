@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>我的工作台 · CampusLink</title>
+<link rel="stylesheet" href="assets/css/main.css">
+<style>
+  .dash-hero { display: flex; justify-content: space-between; align-items: flex-end; gap: 20px; flex-wrap: wrap; margin-bottom: 26px; }
+  .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+  .kpi { padding: 20px; display: flex; gap: 14px; align-items: center; }
+  .kpi .ic { width: 46px; height: 46px; border-radius: 14px; display: grid; place-items: center; flex: none; }
+  .kpi .ic svg { width: 22px; height: 22px; }
+  .kpi b { font-family: var(--font-num); font-size: 28px; font-weight: 800; line-height: 1; }
+  .todo { display: flex; align-items: center; gap: 14px; padding: 14px 16px; border-radius: 14px; background: var(--bg); transition: .2s; }
+  .todo:hover { background: var(--primary-50); }
+  .todo .ic { width: 38px; height: 38px; border-radius: 12px; background: #fff; display: grid; place-items: center; flex: none; box-shadow: var(--sh-1); }
+  .todo .ic svg { width: 18px; height: 18px; }
+  .row-card { padding: 18px 20px; display: grid; grid-template-columns: minmax(0, 1fr) 180px 190px auto; gap: 20px; align-items: center; }
+  .prog { height: 6px; border-radius: 6px; background: var(--line-2); overflow: hidden; }
+  .prog i { display: block; height: 100%; background: var(--primary); border-radius: 6px; }
+  @media (max-width: 1000px) { .kpis { grid-template-columns: 1fr 1fr; } .row-card { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<main class="page">
+  <div class="container">
+    <div class="dash-hero">
+      <div><span class="eyebrow" data-ic="grid">工作台</span><h1 class="h1 mt-16" id="hello"></h1></div>
+      <a class="btn btn-primary" href="publish.html" data-ic="plus">发布新需求</a>
+    </div>
+    <div class="kpis" id="kpis"></div>
+    <div class="layout-side">
+      <section>
+        <div class="tabs" id="dTabs"><button data-tab="collabs" class="active" data-ic="layers">我的合作</button><button data-tab="posts" data-ic="file">我发布的</button><button data-tab="apps" data-ic="send">我申请的</button></div>
+        <div class="col gap-12 mt-16" id="pane"></div>
+      </section>
+      <aside class="card card-pad sticky">
+        <div class="section-title"><h3 data-ic="flag">待办</h3><span class="badge badge-coral" id="todoCnt"></span></div>
+        <div class="col gap-8" id="todos"></div>
+      </aside>
+    </div>
+  </div>
+</main>
+<script src="assets/js/config.js"></script>
+<script src="assets/js/mock-data.js"></script>
+<script src="assets/js/api.js"></script>
+<script src="assets/js/ui.js"></script>
+<script>
+(async function () {
+  const U = CL.ui; const { $, $$, icon, esc, avatar, modeBadge, statusBadge, timeAgo, fmtDate, emptyState, tabs, qs, countUp } = U;
+  await U.mountHeader({});
+  const me = await U.requireLogin();
+  U.hydrate();
+  const h = new Date().getHours();
+  $('#hello').innerHTML = `${h < 11 ? '早上好' : h < 14 ? '中午好' : h < 18 ? '下午好' : '晚上好'}，<span class="hl">${esc(me.name)}</span>`;
+
+  const [collabs, posts, apps] = await Promise.all([CL.api.collabs.mine(), CL.api.posts.mine(), CL.api.applications.mine()]);
+  const reviewState = await Promise.all(collabs.filter((c) => c.status === 'completed').map(async (c) => ({ c, r: await CL.api.reviews.forCollab(c.id) })));
+
+  // 待办
+  const todos = [];
+  collabs.filter((c) => c.status === 'confirming' && !c.confirmations[me.id]).forEach((c) => todos.push(['clipboard', 'var(--amber)', '确认合作单', c.title, `confirm.html?id=${c.id}`]));
+  collabs.filter((c) => c.status === 'delivered' && !c.completeRequests[me.id]).forEach((c) => todos.push(['flag', 'var(--coral)', '对方申请结项，待你验收', c.title, `workspace.html?id=${c.id}`]));
+  posts.filter((p) => p.pendingCount).forEach((p) => todos.push(['inbox', 'var(--primary)', `${p.pendingCount} 份申请待处理`, p.title, `applicants.html?post=${p.id}`]));
+  reviewState.filter(({ r }) => r.pendingFor.length).forEach(({ c }) => todos.push(['star', '#f5b301', '合作已完成，去评价', c.title, `review.html?id=${c.id}`]));
+  $('#todoCnt').textContent = todos.length || ''; $('#todoCnt').classList.toggle('hidden', !todos.length);
+  $('#todos').innerHTML = todos.length ? todos.map(([ic, c, t, s, l]) => `<a class="todo" href="${l}"><span class="ic" style="color:${c}">${icon(ic)}</span><div class="grow"><div class="fw-700 text-sm">${t}</div><div class="text-xs text-muted ellipsis">${esc(s)}</div></div>${icon('chevronRight').replace('<svg', '<svg style="width:16px;color:var(--muted-2)"')}</a>`).join('') : emptyState('check', '全部处理完啦', '');
+
+  // KPI
+  const K = [['layers', 'var(--primary)', 'var(--primary-50)', collabs.filter((c) => ['active', 'delivered'].includes(c.status)).length, '进行中的合作'], ['clipboard', '#c27c00', '#fff5e0', collabs.filter((c) => c.status === 'confirming').length, '待确认合作单'], ['inbox', 'var(--together)', 'var(--together-bg)', posts.reduce((s, p) => s + (p.pendingCount || 0), 0), '待处理申请'], ['award', '#0f9a6c', 'var(--mint-bg)', collabs.filter((c) => c.status === 'completed').length, '已完成合作']];
+  $('#kpis').innerHTML = K.map(([ic, c, bg, n, t], i) => `<div class="card kpi reveal" style="--d:${i * 0.06}s"><span class="ic" style="color:${c};background:${bg}">${icon(ic)}</span><div><b data-n="${n}">0</b><div class="text-sm text-muted">${t}</div></div></div>`).join('');
+  $$('[data-n]').forEach((n) => countUp(n, +n.dataset.n, { dur: 800 }));
+
+  const P = {
+    collabs: () => collabs.length ? collabs.map((c) => {
+      const ms = c.agreement.milestones || []; const done = ms.filter((m) => m.done).length;
+      const other = c.members.filter((m) => m.id !== me.id);
+      const link = c.status === 'confirming' ? `confirm.html?id=${c.id}` : c.status === 'completed' ? `review.html?id=${c.id}` : `workspace.html?id=${c.id}`;
+      return `<div class="card card-hover row-card" onclick="location.href='${link}'">
+        <div><div class="row gap-8">${modeBadge(c.mode)}${statusBadge('collab', c.status)}</div><div class="fw-700 mt-8 ellipsis" style="font-size:15.5px">${esc(c.title)}</div><div class="text-xs text-muted mt-4 ellipsis">${c.lastMessage ? esc(c.lastMessage.content || '[文件]') + ' · ' + timeAgo(c.lastMessage.createdAt) : '暂无消息'}</div></div>
+        <div class="row gap-8"><div class="avatar-stack">${c.members.map((m) => avatar(m, 'sm', { verified: false })).join('')}</div><div class="text-xs text-muted">与 ${other.map((o) => esc(o.name)).join('、')}</div></div>
+        <div>${ms.length ? `<div class="row-between text-xs text-muted mb-8"><span>里程碑</span><b>${done}/${ms.length}</b></div><div class="prog"><i style="width:${(done / ms.length) * 100}%"></i></div>` : `<div class="text-xs text-muted">截止 ${fmtDate(c.agreement.endDate)}</div>`}</div>
+        <div class="row gap-6"><a class="btn btn-ghost btn-sm" href="confirm.html?id=${c.id}" onclick="event.stopPropagation()">${icon('clipboard')}合作单</a>${['active', 'delivered', 'completed'].includes(c.status) ? `<a class="btn btn-soft btn-sm" href="workspace.html?id=${c.id}" onclick="event.stopPropagation()">${icon('chat')}空间</a>` : ''}</div>
+      </div>`;
+    }).join('') : `<div class="card">${emptyState('layers', '还没有合作', '去广场看看，或者发布你的第一个需求', '<a class="btn btn-primary" href="explore.html">去广场</a>')}</div>`,
+    posts: () => posts.length ? posts.map((p) => `<div class="card card-hover row-card" style="grid-template-columns:minmax(0,1fr) 140px 120px auto" onclick="location.href='post.html?id=${p.id}'">
+        <div><div class="row gap-8">${modeBadge(p.mode)}${statusBadge('post', p.status)}</div><div class="fw-700 mt-8 ellipsis" style="font-size:15.5px">${esc(p.title)}</div><div class="text-xs text-muted mt-4">${timeAgo(p.createdAt)}发布 · ${p.viewCount} 浏览</div></div>
+        <div class="text-sm"><b class="num" style="font-size:20px">${p.applicantCount}</b> <span class="text-muted">人申请</span></div>
+        <div>${p.pendingCount ? `<span class="badge badge-coral">${p.pendingCount} 待处理</span>` : '<span class="text-xs text-muted">无待处理</span>'}</div>
+        <a class="btn btn-primary btn-sm" href="applicants.html?post=${p.id}" onclick="event.stopPropagation()">${icon('users')}管理申请</a></div>`).join('') : `<div class="card">${emptyState('file', '还没有发布需求', '', '<a class="btn btn-primary" href="publish.html">发布需求</a>')}</div>`,
+    apps: () => apps.length ? apps.map((a) => `<div class="card card-hover row-card" style="grid-template-columns:minmax(0,1fr) 160px auto" onclick="location.href='post.html?id=${a.postId}'">
+        <div><div class="row gap-8">${modeBadge(a.post?.mode)}${statusBadge('application', a.status)}${a.role ? `<span class="tag tag-sm">${esc(a.role)}</span>` : ''}</div><div class="fw-700 mt-8 ellipsis" style="font-size:15.5px">${esc(a.post?.title)}</div><div class="text-xs text-muted mt-4 ellipsis">我的留言：${esc(a.message)}</div></div>
+        <div class="row gap-8">${avatar(a.post?.author, 'sm')}<div class="text-xs"><b>${esc(a.post?.author?.name)}</b><div class="text-muted">${timeAgo(a.createdAt)}申请</div></div></div>
+        <div>${a.collabId ? `<a class="btn btn-primary btn-sm" href="confirm.html?id=${a.collabId}" onclick="event.stopPropagation()">${icon('clipboard')}进入合作</a>` : `<a class="btn btn-ghost btn-sm" href="post.html?id=${a.postId}">查看</a>`}</div></div>`).join('') : `<div class="card">${emptyState('send', '还没有申请过', '', '<a class="btn btn-primary" href="explore.html">去广场看看</a>')}</div>`,
+  };
+  const show = (k) => { $('#pane').innerHTML = P[k](); $('#pane').classList.remove('stagger'); void $('#pane').offsetWidth; $('#pane').classList.add('stagger'); };
+  const t = tabs($('#dTabs'), show); const init = qs('tab') || 'collabs'; t.set(init, false); show(init);
+  U.reveal(); U.mountFooter();
+})();
+</script>
+</body>
+</html>

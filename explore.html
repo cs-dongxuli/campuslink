@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>广场 · CampusLink</title>
+<link rel="stylesheet" href="assets/css/main.css">
+<style>
+  .ex-hero { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; flex-wrap: wrap; padding: 18px 0 26px; }
+  .ex-hero .h1 { margin-top: 14px; }
+  .ex-hero .lead { margin-top: 8px; }
+  .mode-tabs .ind { background: #fff; }
+  .mode-tabs button[data-tab="teach"].active { color: var(--teach); }
+  .mode-tabs button[data-tab="help"].active { color: var(--help); }
+  .mode-tabs button[data-tab="together"].active { color: var(--together); }
+  .toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 18px; flex-wrap: wrap; }
+  .filter-card { padding: 20px; }
+  .filter-card h5 { margin: 0 0 10px; font-size: 13px; color: var(--muted); font-weight: 600; }
+  .filter-card .grp + .grp { margin-top: 20px; }
+  .feed { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 18px; }
+  .person-card .svc { display: flex; align-items: center; justify-content: space-between; padding: 9px 12px; border-radius: 10px; background: var(--bg); font-size: 13px; }
+  .person-card .svc b { font-family: var(--font-num); }
+  .mode-banner { border-radius: 22px; padding: 22px 26px; display: flex; gap: 18px; align-items: center; margin-bottom: 22px; background: #fff; box-shadow: var(--sh-1); border: 1px solid var(--line); position: relative; overflow: hidden; }
+  .mode-banner .ic { width: 52px; height: 52px; border-radius: 16px; display: grid; place-items: center; color: #fff; flex: none; }
+  .mode-banner .ic svg { width: 24px; height: 24px; }
+  .mode-banner::after { content: ""; position: absolute; right: -40px; top: -60px; width: 200px; height: 200px; border-radius: 50%; background: var(--mb); opacity: .7; }
+</style>
+</head>
+<body>
+<main class="page" style="padding-top:calc(var(--header-h) + 8px)">
+  <div class="container">
+    <div class="ex-hero">
+      <div>
+        <span class="eyebrow" id="exEyebrow"></span>
+        <h1 class="h1" id="exTitle"></h1>
+        <p class="lead" id="exLead"></p>
+      </div>
+      <div class="col" style="align-items:flex-end;gap:10px">
+        <div class="tabs mode-tabs" id="modeTabs">
+          <button data-tab="">全部</button>
+          <button data-tab="teach" data-ic="teach">教我做</button>
+          <button data-tab="help" data-ic="help">帮我做</button>
+          <button data-tab="together" data-ic="together">一起做</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="layout-side-l">
+      <aside class="card filter-card sticky" id="filters">
+        <div class="grp"><h5>浏览</h5><div class="tabs" id="kindTabs" style="display:flex"><button data-tab="posts" class="active" style="flex:1;justify-content:center">找需求</button><button data-tab="people" style="flex:1;justify-content:center">找人</button></div></div>
+        <div class="grp" data-only="posts"><h5>分类</h5><div class="choice-group" id="catGroup"></div></div>
+        <div class="grp" data-only="posts"><h5>合作方式</h5><div class="choice-group">
+          <label class="choice"><input type="radio" name="location" value="" checked><span>不限</span></label>
+          <label class="choice"><input type="radio" name="location" value="online"><span data-ic="video">线上</span></label>
+          <label class="choice"><input type="radio" name="location" value="offline"><span data-ic="mapPin">线下</span></label>
+        </div></div>
+        <div class="grp"><a class="btn btn-primary btn-block" href="publish.html" data-ic="plus">发布我的需求</a></div>
+        <p class="text-xs text-muted mt-16">没找到合适的？发布需求后，有能力的同学会主动来申请。</p>
+      </aside>
+
+      <section>
+        <div id="modeBanner"></div>
+        <div class="toolbar">
+          <div class="text-muted text-sm" id="resultCount"></div>
+          <div class="row gap-8">
+            <div class="input-group" style="width:240px"><span data-ic="search"></span><input class="input" id="q" placeholder="搜索关键词" style="height:38px"></div>
+            <select class="select" id="sort" style="height:38px;width:130px"><option value="latest">最新发布</option><option value="hot">最多浏览</option><option value="deadline">即将截止</option></select>
+          </div>
+        </div>
+        <div class="feed" id="feed"></div>
+      </section>
+    </div>
+  </div>
+</main>
+<script src="assets/js/config.js"></script>
+<script src="assets/js/mock-data.js"></script>
+<script src="assets/js/api.js"></script>
+<script src="assets/js/ui.js"></script>
+<script>
+(async function () {
+  const { $, $$, qs, icon, tabs, postCard, avatar, esc, emptyState, MODES, fmtBudget, hydrate } = CL.ui;
+  const state = { mode: qs('mode') || '', kind: qs('kind') || 'posts', q: qs('q') || '', category: '', location: '', sort: 'latest' };
+  await CL.ui.mountHeader({ active: state.mode || 'explore' });
+  hydrate();
+
+  const CATS = ['全部', '设计', '开发', '编程', '剪辑', '竞赛', '科研', '工科', '其他'];
+  $('#catGroup').innerHTML = CATS.map((c, i) => `<label class="choice"><input type="radio" name="cat" value="${i ? c : ''}" ${i ? '' : 'checked'}><span>${c}</span></label>`).join('');
+  $('#q').value = state.q;
+
+  const COPY = {
+    '': ['广场', '发现正在发生的需求', '同学们正在找导师、找帮手、找队友。看看有没有你能帮上忙的。'],
+    teach: ['教我做', '找到愿意<span class="hl">教你</span>的人', '学长学姐、研究生和老师，针对你的具体问题 1v1 指导。'],
+    help: ['帮我做', '把任务交给<span class="hl">靠谱</span>的同学', '海报、剪辑、代码、数据……看作品下单，合作单约定交付。'],
+    together: ['一起做', '找到能力<span class="hl">互补</span>的队友', '比赛、项目、创业——按角色招募，一起拿奖、一起加分。'],
+  };
+  const BANNER = {
+    teach: ['var(--teach)', 'var(--teach-bg)', '发布“教我做”需求', '写清楚你想学什么、目前水平、希望的时间与方式，导师会带着履历来申请。'],
+    help: ['var(--help)', 'var(--help-bg)', '发布“帮我做”需求', '写清交付物、截止时间和预算，执行方会附上相关作品报价。'],
+    together: ['var(--together)', 'var(--together-bg)', '发布“一起做”招募', '写明比赛/项目、已有成员和缺少的角色，申请者会按角色报名。'],
+  };
+  function renderHead() {
+    const [eb, title, lead] = COPY[state.mode];
+    $('#exEyebrow').innerHTML = state.mode ? `${icon(MODES[state.mode].icon)}${eb}` : `<span class="dot dot-pulse" style="color:var(--coral)"></span>${eb}`;
+    $('#exEyebrow').style.color = state.mode ? MODES[state.mode].color : '';
+    $('#exTitle').innerHTML = title; $('#exLead').textContent = lead;
+    const b = BANNER[state.mode];
+    $('#modeBanner').innerHTML = b && state.kind === 'posts' ? `<div class="mode-banner" style="--mb:${b[1]}"><span class="ic" style="background:${b[0]}">${icon(MODES[state.mode].icon)}</span><div class="grow"><b>${b[2]}</b><p class="text-sm text-muted mt-4">${b[3]}</p></div><a class="btn btn-dark btn-sm" style="position:relative;z-index:1" href="publish.html?mode=${state.mode}">${icon('plus')}立即发布</a></div>` : '';
+    $$('#filters [data-only="posts"]').forEach((n) => n.classList.toggle('hidden', state.kind !== 'posts'));
+    $('#sort').classList.toggle('hidden', state.kind !== 'posts');
+    CL.ui.setTitle(eb);
+  }
+
+  async function load() {
+    renderHead();
+    const url = new URL(location.href);
+    ['mode', 'q', 'kind'].forEach((k) => (state[k] && !(k === 'kind' && state[k] === 'posts') ? url.searchParams.set(k, state[k]) : url.searchParams.delete(k)));
+    history.replaceState(null, '', url);
+    const feed = $('#feed');
+    feed.innerHTML = Array(6).fill('<div class="card skeleton" style="height:270px"></div>').join('');
+    if (state.kind === 'posts') {
+      const { items, total } = await CL.api.posts.list({ mode: state.mode, q: state.q, category: state.category, location: state.location, sort: state.sort });
+      $('#resultCount').innerHTML = `共 <b class="text-primary">${total}</b> 个需求正在招募`;
+      feed.innerHTML = items.length ? items.map(postCard).join('') : `<div style="grid-column:1/-1">${emptyState('search', '暂时没有匹配的需求', '换个关键词，或者自己发布一个吧', `<a class="btn btn-primary" href="publish.html${state.mode ? '?mode=' + state.mode : ''}">${icon('plus')}发布需求</a>`)}</div>`;
+    } else {
+      const { items, total } = await CL.api.users.search({ q: state.q, mode: state.mode });
+      $('#resultCount').innerHTML = `找到 <b class="text-primary">${total}</b> 位同学`;
+      feed.innerHTML = items.length ? items.map(personCard).join('') : `<div style="grid-column:1/-1">${emptyState('users', '没有找到合适的同学')}</div>`;
+    }
+    feed.classList.remove('stagger'); void feed.offsetWidth; feed.classList.add('stagger');
+  }
+  function personCard(u) {
+    const svcs = (u.services || []).filter((s) => !state.mode || s.mode === state.mode).slice(0, 2);
+    return `<article class="card card-hover person-card" onclick="location.href='profile.html?id=${u.id}'">
+      <div class="row">${avatar(u, 'md')}<div class="grow"><div class="row gap-6"><b class="text-lg">${esc(u.name)}</b>${u.verifiedType === 'tutor' ? '<span class="badge badge-blue">导师认证</span>' : ''}</div><div class="text-sm text-muted ellipsis">${esc(u.school)} · ${esc(u.major)} · ${esc(u.grade)}</div></div></div>
+      <p class="text-sm text-muted clamp-2">${esc(u.bio)}</p>
+      <div class="stat-row sm"><div class="stat"><b>${u.stats.rating.toFixed(1)}</b><span>评分</span></div><div class="stat"><b>${u.stats.completed}</b><span>完成合作</span></div><div class="stat"><b>${u.stats.goodRate}%</b><span>好评率</span></div></div>
+      <div class="row gap-6 wrap">${u.skills.slice(0, 4).map((s) => `<span class="tag tag-sm">${esc(s)}</span>`).join('')}</div>
+      ${svcs.length ? `<div class="col gap-6">${svcs.map((s) => `<div class="svc"><span class="row gap-6">${CL.ui.modeBadge(s.mode)}${esc(s.title)}</span>${fmtBudget(s.price).replace('class="price', 'class="price text-sm')}</div>`).join('')}</div>` : ''}
+    </article>`;
+  }
+
+  const mt = tabs($('#modeTabs'), (k) => { state.mode = k; $$('.nav a').forEach((a) => a.classList.toggle('active', (a.getAttribute('href').split('mode=')[1] || '') === k && (k || a.textContent === '广场'))); load(); });
+  mt.set(state.mode, false);
+  const kt = tabs($('#kindTabs'), (k) => { state.kind = k; load(); });
+  kt.set(state.kind, false);
+  $$('input[name="cat"]').forEach((r) => (r.onchange = () => { state.category = r.value; load(); }));
+  $$('input[name="location"]').forEach((r) => (r.onchange = () => { state.location = r.value; load(); }));
+  $('#sort').onchange = (e) => { state.sort = e.target.value; load(); };
+  let deb; $('#q').oninput = (e) => { clearTimeout(deb); deb = setTimeout(() => { state.q = e.target.value.trim(); load(); }, 300); };
+  load();
+  CL.ui.mountFooter();
+})();
+</script>
+</body>
+</html>

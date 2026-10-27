@@ -1,0 +1,395 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CampusLink · 让需求，遇见对的同伴</title>
+<link rel="stylesheet" href="assets/css/main.css">
+<style>
+  /* ---------- Hero ---------- */
+  .hero { min-height: 100vh; padding: calc(var(--header-h) + 40px) 0 60px; display: flex; align-items: center; }
+  .hero .container { display: grid; grid-template-columns: 1fr 1.18fr; gap: 56px; align-items: center; }
+  .hero-copy .display { margin: 22px 0 20px; }
+  .hero-copy .lead { max-width: 460px; }
+  .hero-cta { display: flex; gap: 12px; margin-top: 34px; flex-wrap: wrap; }
+  .hero-stats { display: flex; gap: 36px; margin-top: 44px; }
+  .hero-stats b { font-size: 28px; }
+  .hero-stats-note { margin: 12px 0 0; color: #526078; font-size: 13px; line-height: 1.6; }
+  .hero-stats-note strong { display: inline-block; margin-right: 6px; padding: 2px 8px; border-radius: 6px; background: rgba(255,255,255,.8); color: #324663; font-weight: 600; }
+  .hero-modes { display: flex; gap: 8px; margin-top: 28px; }
+  .hero-modes button { transition: transform .3s var(--ease), box-shadow .3s; }
+  .hero-modes button.on { transform: translateY(-2px); box-shadow: var(--sh-2); }
+  .hero-modes .mode { height: 32px; padding: 0 14px 0 10px; font-size: 13.5px; }
+
+  /* 应用窗口 mock（来自视频） */
+  .app-window { position: relative; background: #fff; border-radius: 26px; box-shadow: var(--sh-3); padding: 16px; border: 1px solid rgba(255,255,255,.9); }
+  .aw-top { display: flex; align-items: center; gap: 14px; padding: 4px 6px 16px; }
+  .aw-top .logo { font-size: 16px; } .aw-top .logo svg { width: 24px; height: 24px; }
+  .aw-search { flex: 1; height: 40px; border-radius: 99px; background: #f2f4f9; display: flex; align-items: center; gap: 10px; padding: 0 16px; color: var(--ink-2); font-size: 14px; }
+  .aw-search svg { width: 17px; height: 17px; color: var(--muted); }
+  .aw-search .caret { width: 1.5px; height: 17px; background: var(--primary); animation: blink 1s steps(1) infinite; margin-left: -6px; }
+  @keyframes blink { 50% { opacity: 0; } }
+  .aw-body { display: grid; grid-template-columns: 1fr 1.05fr; gap: 18px; border: 1px solid var(--line-2); border-radius: 18px; padding: 12px; }
+  .aw-art { border-radius: 14px; overflow: hidden; background: #e8eeff; aspect-ratio: .82; position: relative; }
+  .aw-art svg { width: 100%; height: 100%; }
+  .aw-prof { padding: 8px 6px; display: flex; flex-direction: column; }
+  .aw-actions { display: flex; flex-direction: column; gap: 8px; margin-top: auto; }
+  .aw-act { display: flex; align-items: center; gap: 10px; height: 46px; padding: 0 14px; border-radius: 12px; background: #f4f6fb; font-weight: 600; font-size: 14px; transition: background .4s var(--ease), color .4s, box-shadow .4s, transform .4s var(--ease); }
+  .aw-act .ic { width: 26px; height: 26px; border-radius: 8px; display: grid; place-items: center; background: #fff; color: var(--primary); transition: .4s; }
+  .aw-act .ic svg { width: 15px; height: 15px; }
+  .aw-act small { margin-left: auto; color: var(--muted); font-weight: 500; font-size: 12px; transition: color .4s; }
+  .aw-act.on { background: var(--primary); color: #fff; box-shadow: var(--sh-blue); transform: scale(1.02); }
+  .aw-act.on .ic { background: rgba(255,255,255,.2); color: #fff; }
+  .aw-act.on small { color: rgba(255,255,255,.8); }
+  .aw-foot { margin-top: 12px; display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 12px; }
+  .aw-foot .dot { color: var(--mint); }
+
+  /* 浮层卡片 */
+  .pop { position: absolute; left: -64px; bottom: 54px; width: 330px; background: #fff; border-radius: 20px; box-shadow: var(--sh-3); padding: 18px; opacity: 0; transform: translateY(18px) scale(.96); transition: opacity .5s var(--ease), transform .6s var(--ease-spring); pointer-events: none; }
+  .pop.show { opacity: 1; transform: none; }
+  .pop-h { display: flex; gap: 12px; align-items: center; margin-bottom: 14px; }
+  .pop-h .ic { width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center; background: var(--primary-50); color: var(--primary); }
+  .pop-h .ic svg { width: 19px; height: 19px; }
+  .slots { display: flex; gap: 8px; }
+  .slot { flex: 1; text-align: center; padding: 8px 0; border-radius: 10px; border: 1px solid var(--line); font-size: 13px; font-weight: 600; transition: .3s; }
+  .slot.pick { background: var(--primary); color: #fff; border-color: var(--primary); }
+  .pop .cta { margin-top: 14px; height: 40px; border-radius: 12px; display: grid; place-items: center; font-weight: 700; font-size: 14px; color: #fff; background: var(--primary); transition: .3s; }
+  .pop .cta.done { background: var(--mint); }
+  .svc-icons { display: flex; gap: 8px; }
+  .svc-icons i { width: 42px; height: 42px; border-radius: 12px; display: grid; place-items: center; }
+  .svc-icons i::after { content: ""; width: 16px; height: 16px; background: #fff; }
+  .svc-icons i:nth-child(1) { background: var(--primary); } .svc-icons i:nth-child(1)::after { border-radius: 50%; }
+  .svc-icons i:nth-child(2) { background: var(--coral); } .svc-icons i:nth-child(2)::after { border-radius: 4px; }
+  .svc-icons i:nth-child(3) { background: var(--mint); } .svc-icons i:nth-child(3)::after { clip-path: polygon(50% 0, 100% 100%, 0 100%); }
+  .svc-icons i:nth-child(4) { background: var(--ink); } .svc-icons i:nth-child(4)::after { border-radius: 50%; }
+  .match { display: flex; align-items: center; justify-content: space-between; padding: 4px 6px; }
+  .match .p { text-align: center; font-size: 12px; } .match .p b { display: block; font-size: 13px; margin-top: 6px; }
+  .match .line { flex: 1; border-top: 2px dashed var(--line); margin: 0 -4px; position: relative; top: -14px; }
+  .ring { width: 74px; height: 74px; position: relative; display: grid; place-items: center; top: -10px; }
+  .ring svg { position: absolute; inset: 0; transform: rotate(-90deg); }
+  .ring b { font-family: var(--font-num); font-size: 19px; color: var(--mint); font-weight: 800; }
+  .cursor { position: absolute; width: 22px; height: 22px; pointer-events: none; transition: left .8s var(--ease), top .8s var(--ease), transform .15s; z-index: 5; filter: drop-shadow(0 2px 3px rgba(0,0,0,.25)); }
+  .cursor.click { transform: scale(.82); }
+  .hero-visual { position: relative; }
+  .hero-visual .badge-float { position: absolute; right: 40px; top: -30px; background: #fff; border-radius: 14px; padding: 10px 14px; box-shadow: var(--sh-3); display: flex; align-items: center; gap: 10px; font-size: 13px; animation: floatR 7s ease-in-out infinite; }
+  .hero-visual .badge-float .ic { width: 30px; height: 30px; border-radius: 9px; background: var(--mint-bg); color: var(--mint); display: grid; place-items: center; }
+  .hero-visual .badge-float .ic svg { width: 16px; height: 16px; }
+
+  /* ---------- Sections ---------- */
+  section.block { padding: 110px 0; position: relative; }
+  .sec-head { text-align: center; max-width: 680px; margin: 0 auto 56px; }
+  .sec-head .h1 { margin: 16px 0 14px; }
+  .mode-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; }
+  .mcard { position: relative; overflow: hidden; padding: 30px 28px 28px; border-radius: 26px; background: #fff; box-shadow: var(--sh-2); transition: transform .45s var(--ease), box-shadow .45s; display: flex; flex-direction: column; min-height: 430px; }
+  .mcard:hover { transform: translateY(-8px); box-shadow: var(--sh-3); }
+  .mcard::before { content: ""; position: absolute; width: 260px; height: 260px; right: -90px; top: -90px; border-radius: 50%; background: var(--mbg); transition: transform .6s var(--ease); }
+  .mcard:hover::before { transform: scale(1.25); }
+  .mcard > * { position: relative; }
+  .mcard .big-ic { width: 60px; height: 60px; border-radius: 18px; display: grid; place-items: center; background: var(--mc); color: #fff; box-shadow: 0 12px 24px -10px var(--mc); }
+  .mcard .big-ic svg { width: 28px; height: 28px; }
+  .mcard .num-label { position: absolute; right: 26px; top: 28px; font-family: var(--font-num); font-weight: 800; font-size: 14px; color: var(--mc); opacity: .7; }
+  .mcard h3 { font-size: 30px; font-weight: 900; margin: 26px 0 8px; }
+  .mcard ul { margin: 20px 0 24px; display: flex; flex-direction: column; gap: 10px; }
+  .mcard li { display: flex; gap: 10px; align-items: flex-start; color: var(--ink-2); font-size: 14px; }
+  .mcard li svg { width: 18px; height: 18px; color: var(--mc); flex: none; margin-top: 2px; }
+  .mcard .go { margin-top: auto; display: inline-flex; align-items: center; gap: 8px; font-weight: 700; color: var(--mc); }
+  .mcard .go svg { width: 18px; height: 18px; transition: transform .3s var(--ease); }
+  .mcard:hover .go svg { transform: translateX(5px); }
+  .mcard.teach { --mc: var(--teach); --mbg: var(--teach-bg); }
+  .mcard.help { --mc: var(--help); --mbg: var(--help-bg); }
+  .mcard.together { --mc: var(--together); --mbg: var(--together-bg); }
+
+  /* 流程 */
+  .flow { position: relative; display: grid; grid-template-columns: repeat(5, 1fr); gap: 18px; }
+  .flow-line { position: absolute; left: 10%; right: 10%; top: 34px; height: 3px; background: var(--line); border-radius: 3px; overflow: hidden; }
+  .flow-line i { position: absolute; inset: 0; background: linear-gradient(90deg, var(--primary), var(--together)); transform-origin: left; transform: scaleX(0); transition: transform 2.2s var(--ease) .3s; }
+  .flow.in .flow-line i { transform: scaleX(1); }
+  .fstep { text-align: center; position: relative; }
+  .fstep .n { width: 70px; height: 70px; margin: 0 auto 18px; border-radius: 22px; background: #fff; box-shadow: var(--sh-2); display: grid; place-items: center; color: var(--primary); position: relative; transition: .5s var(--ease); }
+  .fstep .n svg { width: 28px; height: 28px; }
+  .fstep .n em { position: absolute; top: -8px; right: -8px; width: 24px; height: 24px; border-radius: 50%; background: var(--primary); color: #fff; font-style: normal; font-family: var(--font-num); font-size: 12px; font-weight: 800; display: grid; place-items: center; border: 3px solid #f4f6fc; }
+  .flow.in .fstep .n { animation: popIn .6s var(--ease-spring) both; animation-delay: calc(var(--i) * .35s + .3s); }
+  @keyframes popIn { from { transform: scale(.6); opacity: 0; } }
+  .fstep h4 { font-size: 16px; font-weight: 800; margin-bottom: 6px; }
+  .fstep p { color: var(--muted); font-size: 13px; max-width: 190px; margin: 0 auto; }
+
+  /* 分屏特性 */
+  .split { display: grid; grid-template-columns: 1fr 1.2fr; gap: 70px; align-items: center; }
+  .split.rev { grid-template-columns: 1.2fr 1fr; }
+  .split.rev .split-copy { order: 2; }
+  .split-copy .h1 { margin: 18px 0 16px; }
+  .feature-list { margin-top: 26px; display: flex; flex-direction: column; gap: 14px; }
+  .feature-list li { display: flex; gap: 14px; }
+  .feature-list .ic { width: 40px; height: 40px; border-radius: 12px; background: #fff; box-shadow: var(--sh-1); color: var(--primary); display: grid; place-items: center; flex: none; }
+  .feature-list .ic svg { width: 19px; height: 19px; }
+  .works-mock { padding: 18px; }
+  .works-mock .wg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  .works-mock .wc { border-radius: 14px; overflow: hidden; background: #fff; border: 1px solid var(--line-2); transition: transform .4s var(--ease); }
+  .works-mock .wc:hover { transform: translateY(-4px) rotate(-.5deg); }
+  .works-mock .wc .cv { aspect-ratio: 4/3; }
+  .works-mock .wc .cv svg { width: 100%; height: 100%; }
+  .works-mock .wc .who { display: flex; align-items: center; gap: 6px; padding: 8px 10px; font-size: 12px; font-weight: 600; }
+  .works-mock .wc .who .badge { margin-left: auto; height: 20px; font-size: 11px; }
+
+  /* 协作空间预览 */
+  .ws-mock { display: grid; grid-template-columns: 1.3fr 1fr; overflow: hidden; }
+  .ws-chat { padding: 18px; border-right: 1px solid var(--line); display: flex; flex-direction: column; gap: 12px; min-height: 360px; }
+  .bubble { max-width: 78%; padding: 10px 14px; border-radius: 16px; font-size: 13.5px; background: #f2f4f9; align-self: flex-start; border-bottom-left-radius: 4px; }
+  .bubble.me { align-self: flex-end; background: var(--primary); color: #fff; border-radius: 16px; border-bottom-right-radius: 4px; }
+  .bubble.file { background: #fff; border: 1px solid var(--line); display: flex; gap: 10px; align-items: center; }
+  .bubble.file .fi { width: 36px; height: 36px; border-radius: 10px; background: var(--coral-bg); color: var(--coral); display: grid; place-items: center; }
+  .bubble.file .fi svg { width: 18px; height: 18px; }
+  .sys { align-self: center; font-size: 12px; color: var(--muted); background: rgba(255,255,255,.7); padding: 4px 12px; border-radius: 99px; }
+  .ws-ver { padding: 18px; background: #fafbfe; }
+  .ver { display: flex; gap: 12px; padding: 10px 0; }
+  .ver .vn { width: 34px; height: 34px; border-radius: 10px; background: #fff; border: 1px solid var(--line); font-family: var(--font-num); font-weight: 800; font-size: 12px; display: grid; place-items: center; color: var(--muted); flex: none; }
+  .ver.cur .vn { background: var(--primary); color: #fff; border-color: var(--primary); }
+  .ws-mock .reveal-chat > * { opacity: 0; transform: translateY(10px); transition: .5s var(--ease); }
+  .ws-mock.in .reveal-chat > * { opacity: 1; transform: none; }
+  .ws-mock.in .reveal-chat > *:nth-child(2) { transition-delay: .5s; } .ws-mock.in .reveal-chat > *:nth-child(3) { transition-delay: 1s; } .ws-mock.in .reveal-chat > *:nth-child(4) { transition-delay: 1.5s; } .ws-mock.in .reveal-chat > *:nth-child(5) { transition-delay: 2s; } .ws-mock.in .reveal-chat > *:nth-child(6) { transition-delay: 2.5s; }
+
+  /* 网络图 */
+  .network { position: relative; height: 440px; }
+  .network svg { width: 100%; height: 100%; overflow: visible; }
+  .cta-band .logo b { color: #cfe0ff; }
+  .network .edge { fill: none; stroke: #c8d3f5; stroke-width: 1.6; stroke-dasharray: 400; stroke-dashoffset: 400; transition: stroke-dashoffset 1.6s var(--ease); }
+  .network.in .edge { stroke-dashoffset: 0; }
+  .network .node { opacity: 0; transform-box: fill-box; transform-origin: center; transform: scale(.4); transition: opacity .6s, transform .7s var(--ease-spring); }
+  .network.in .node { opacity: 1; transform: none; }
+  .network .pulse-dot { fill: var(--primary); }
+  .net-label { position: absolute; font-size: 13px; font-weight: 700; padding: 5px 12px; border-radius: 99px; background: #fff; box-shadow: var(--sh-1); }
+
+  .live-head { display: flex; align-items: end; justify-content: space-between; margin-bottom: 26px; gap: 20px; flex-wrap: wrap; }
+
+  /* CTA */
+  .cta-band { position: relative; overflow: hidden; border-radius: 36px; padding: 72px 60px; background: linear-gradient(120deg, #1a39bf 0%, #2f5bff 55%, #5b7fff 100%); color: #fff; text-align: center; }
+  .cta-band .h1 { color: #fff; }
+  .cta-band p { color: rgba(255,255,255,.82); margin-top: 12px; font-size: 16px; }
+  .cta-band .btn-ghost { background: #fff; color: var(--primary); border: 0; }
+  .cta-rings { position: absolute; inset: 0; pointer-events: none; }
+  .cta-rings span { position: absolute; border-radius: 50%; border: 2px solid rgba(255,255,255,.18); }
+
+  @media (max-width: 1080px) {
+    .hero .container, .split, .split.rev { grid-template-columns: 1fr; }
+    .split.rev .split-copy { order: 0; }
+    .mode-cards { grid-template-columns: 1fr; }
+    .flow { grid-template-columns: 1fr 1fr; } .flow-line { display: none; }
+    .pop { left: 10px; }
+  }
+  @media (max-width: 760px) {
+    .aw-body { grid-template-columns: 1fr; } .aw-art { display: none; }
+    .ws-mock { grid-template-columns: 1fr; }
+    .cta-band { padding: 48px 24px; }
+  }
+</style>
+</head>
+<body data-page="index">
+
+<!-- ================= HERO ================= -->
+<section class="hero">
+  <div class="container">
+    <div class="hero-copy">
+      <span class="eyebrow reveal" style="--d:.05s"><span class="dot dot-pulse" style="color:var(--mint)"></span>面向在校学生的技能协作平台</span>
+      <h1 class="display reveal" style="--d:.15s">让需求，遇见<br>对的<span class="hl">同伴</span></h1>
+      <p class="lead reveal" style="--d:.25s">不看简历看作品。找导师请教、把任务外包、为比赛组队——在同一个校园里，把你需要的能力连接起来。</p>
+      <div class="hero-modes reveal" style="--d:.32s" id="heroModes"></div>
+      <div class="hero-cta reveal" style="--d:.4s">
+        <a href="explore.html" class="btn btn-primary btn-lg" data-ic="search">开始探索</a>
+        <a href="publish.html" class="btn btn-ghost btn-lg" data-ic="plus">发布我的需求</a>
+      </div>
+      <div class="hero-stats reveal" style="--d:.5s">
+        <div class="stat"><b class="num" data-count="users">0</b><span>注册同学</span></div>
+        <div class="stat"><b class="num" data-count="collaborations">0</b><span>完成合作</span></div>
+        <div class="stat"><b class="num" data-count="avgRating" data-dec="1">0</b><span>平均评分</span></div>
+      </div>
+      <p class="hero-stats-note"><strong>演示数据</strong>以上数字为预设示例，仅用于展示，不代表实际运营成果。</p>
+    </div>
+
+    <div class="hero-visual reveal-scale" style="--d:.2s">
+      <div class="app-window" id="appWin">
+        <div class="aw-top">
+          <span class="logo" data-logo></span>
+          <div class="aw-search"><span data-ic="search"></span><span id="typeText"></span><span class="caret"></span></div>
+          <span class="icon-btn" data-ic="bell"></span>
+          <span class="avatar sm" style="--c1:#ff9a7a;--c2:#ff6b4a">我</span>
+        </div>
+        <div class="aw-body">
+          <div class="aw-art" id="awArt"></div>
+          <div class="aw-prof">
+            <div class="row-between" style="align-items:flex-start">
+              <div class="row"><span class="avatar md" style="--c1:#6f8dff;--c2:#2f5bff">陈</span><div><div class="h3" style="font-size:20px">陈一然</div><div class="text-sm text-muted">交互设计 · 大三</div></div></div>
+              <span class="badge badge-mint"><span data-ic="check"></span>认证创作者</span>
+            </div>
+            <div class="stat-row sm mt-16">
+              <div class="stat"><b>4.9</b><span>综合评分</span></div><div class="stat"><b>38</b><span>完成合作</span></div><div class="stat"><b>98%</b><span>好评率</span></div><div class="stat"><b>24</b><span>作品</span></div>
+            </div>
+            <div class="row gap-6 wrap mt-16"><span class="tag tag-sm">Figma</span><span class="tag tag-sm">UI 设计</span><span class="tag tag-sm">品牌视觉</span><span class="tag tag-sm">动效原型</span></div>
+            <div class="aw-actions mt-16" id="awActs">
+              <div class="aw-act" data-m="teach"><span class="ic" data-ic="chat"></span>预约 1v1 指导<small>¥49 / 30分钟</small></div>
+              <div class="aw-act" data-m="help"><span class="ic" data-ic="bag"></span>购买小型服务<small>¥129 起</small></div>
+              <div class="aw-act" data-m="together"><span class="ic" data-ic="users"></span>邀请组队合作<small>3 个项目招募中</small></div>
+            </div>
+            <div class="aw-foot"><span class="dot"></span>通常 2 小时内回复 · 同校可面对面交流</div>
+          </div>
+        </div>
+
+        <!-- 三张浮层（循环播放） -->
+        <div class="pop" data-pop="teach">
+          <div class="pop-h"><span class="ic" data-ic="chat"></span><div><div class="h4">1v1 作品集指导</div><div class="text-xs text-muted">30 分钟 · 语音或面对面</div></div></div>
+          <div class="slots"><span class="slot" data-slot>周三 19:00</span><span class="slot">周四 20:30</span><span class="slot">周六 14:00</span></div>
+          <div class="cta" data-cta>确认预约</div>
+        </div>
+        <div class="pop" data-pop="help">
+          <div class="pop-h"><span class="ic" style="background:var(--coral-bg);color:var(--coral)" data-ic="bag"></span><div><div class="h4">App 图标设计</div><div class="text-xs text-muted">陈一然 · 3 天交付 · 含 2 次修改</div></div></div>
+          <div class="svc-icons"><i></i><i></i><i></i><i></i></div>
+          <div class="row-between mt-12"><span class="price" style="font-size:24px">¥129 <small style="text-decoration:line-through">¥169</small></span><span class="badge badge-coral">限时优惠</span></div>
+          <div class="cta" data-cta style="background:var(--ink)">立即下单</div>
+        </div>
+        <div class="pop" data-pop="together">
+          <div class="pop-h"><span class="ic" style="background:var(--mint-bg);color:var(--mint)" data-ic="users"></span><div><div class="h4">智能组队匹配</div><div class="text-xs text-muted">创新创业大赛 · 正在招募开发</div></div></div>
+          <div class="match">
+            <div class="p"><span class="avatar md" style="--c1:#6f8dff;--c2:#2f5bff">陈</span><b>陈一然</b><span class="text-primary">UI 设计</span></div>
+            <div class="line"></div>
+            <div class="ring"><svg viewBox="0 0 74 74"><circle cx="37" cy="37" r="32" fill="none" stroke="#e3f7ef" stroke-width="6"/><circle id="ringArc" cx="37" cy="37" r="32" fill="none" stroke="#1fb985" stroke-width="6" stroke-linecap="round" stroke-dasharray="201" stroke-dashoffset="201" style="transition:stroke-dashoffset 1.2s var(--ease)"/></svg><b id="ringNum">0%</b></div>
+            <div class="line"></div>
+            <div class="p"><span class="avatar md" style="--c1:#ff9a7a;--c2:#ff6b4a">周</span><b>周子航</b><span class="text-coral">全栈开发</span></div>
+          </div>
+          <div class="cta" data-cta style="background:var(--ink)">发送组队邀请</div>
+        </div>
+        <svg class="cursor" id="cursor" viewBox="0 0 24 24"><path d="M4 2l16 9-7 2-3 7z" fill="#0d1430" stroke="#fff" stroke-width="1.5" stroke-linejoin="round"/></svg>
+      </div>
+      <div class="badge-float"><span class="ic" data-ic="shieldCheck"></span><div><b>学校邮箱认证</b><div class="text-xs text-muted">只和真实同学合作</div></div></div>
+      <div class="progress-dash mt-24" id="heroDash" style="justify-content:center"><i></i><i></i><i></i><span>01 / 03</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 三种连接 ================= -->
+<section class="block" id="modes">
+  <div class="container">
+    <div class="sec-head reveal">
+      <span class="eyebrow"><b>01</b> 三种连接</span>
+      <h2 class="h1">一个平台，<span class="hl">三种</span>合作方式</h2>
+      <p class="lead">无论你是想学会、想交付，还是想一起赢，都能在这里找到对的人。</p>
+    </div>
+    <div class="mode-cards" id="modeCards"></div>
+  </div>
+</section>
+
+<!-- ================= 流程 ================= -->
+<section class="block" style="padding-top:40px">
+  <div class="container">
+    <div class="sec-head reveal">
+      <span class="eyebrow"><b>02</b> 合作流程</span>
+      <h2 class="h1">从发布到评价，<span class="hl">全程</span>有据可查</h2>
+      <p class="lead">每一步都留痕：申请、录用、合作单、过程文件、互评，最终沉淀成你的合作信用。</p>
+    </div>
+    <div class="flow" id="flow">
+      <div class="flow-line"><i></i></div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 作品认人 ================= -->
+<section class="block">
+  <div class="container split">
+    <div class="split-copy reveal-left">
+      <span class="eyebrow"><b>03</b> 发现</span>
+      <h2 class="h1">用作品<br>认识<span class="hl">对的人</span></h2>
+      <p class="lead">不看简历，看真实作品与能力。每个人都有一份可展示的作品集和合作记录，发起方据此决定是否录用。</p>
+      <ul class="feature-list">
+        <li><span class="ic" data-ic="image"></span><div><b>作品集</b><p class="text-muted text-sm">图片、链接、文件，一页看懂 TA 能做什么</p></div></li>
+        <li><span class="ic" data-ic="star"></span><div><b>合作信用</b><p class="text-muted text-sm">每次合作后的双向评分，形成可信的履历</p></div></li>
+        <li><span class="ic" data-ic="shieldCheck"></span><div><b>身份认证</b><p class="text-muted text-sm">学校邮箱认证，导师/研究生额外认证</p></div></li>
+      </ul>
+    </div>
+    <div class="card works-mock reveal-scale" id="worksMock">
+      <div class="aw-top" style="padding:0 0 14px"><div class="aw-search"><span data-ic="search"></span>找一位会做 App 界面设计的同学</div></div>
+      <div class="row gap-6 mb-16"><span class="tag tag-sm" style="background:var(--ink);color:#fff">推荐</span><span class="tag tag-sm">设计</span><span class="tag tag-sm">开发</span><span class="tag tag-sm">影像</span><span class="tag tag-sm">数据分析</span><span class="tag tag-sm">校企项目</span></div>
+      <div class="wg" id="worksGrid"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 协作空间 ================= -->
+<section class="block">
+  <div class="container split rev">
+    <div class="card ws-mock reveal-scale" id="wsMock">
+      <div class="ws-chat reveal-chat">
+        <span class="sys">双方已确认合作单 v2，合作正式开始</span>
+        <div class="bubble">我先做两套风格样张，一套学术蓝，一套简约黑白～</div>
+        <div class="bubble me">好呀！校徽放左上角就行</div>
+        <div class="bubble file"><span class="fi" data-ic="file"></span><div><b class="text-sm">答辩_视觉稿.pptx</b><div class="text-xs text-muted">v2 · 6.8 MB</div></div></div>
+        <div class="bubble me">蓝色这套！🎉</div>
+        <span class="sys">里程碑「风格确认」已完成</span>
+      </div>
+      <div class="ws-ver">
+        <div class="h4 row gap-6"><span data-ic="history" style="width:17px;color:var(--primary)"></span>版本记录</div>
+        <div class="timeline mt-16" style="padding-left:0">
+          <div class="ver cur"><span class="vn">v3</span><div><b class="text-sm">定稿</b><div class="text-xs text-muted">今天 21:04 · 陈一然</div></div></div>
+          <div class="ver"><span class="vn">v2</span><div><b class="text-sm">信息图 3 页 + 母版</b><div class="text-xs text-muted">昨天 · 陈一然</div></div></div>
+          <div class="ver"><span class="vn">v1</span><div><b class="text-sm">两套风格样张</b><div class="text-xs text-muted">3 天前 · 陈一然</div></div></div>
+        </div>
+        <div class="card-pad-sm mt-16" style="background:#fff;border-radius:14px;border:1px solid var(--line)">
+          <div class="text-xs text-muted">里程碑</div>
+          <div class="row mt-8 text-sm"><span class="badge badge-mint" data-ic="check" style="width:22px;padding:0;justify-content:center"></span>风格确认</div>
+          <div class="row mt-8 text-sm"><span class="badge badge-blue" style="width:22px;padding:0;justify-content:center"><i class="dot"></i></span>初稿交付</div>
+        </div>
+      </div>
+    </div>
+    <div class="split-copy reveal-left">
+      <span class="eyebrow"><b>04</b> 协作</span>
+      <h2 class="h1">确认合作单，<br>在<span class="hl">协作空间</span>里推进</h2>
+      <p class="lead">录用后，双方先在线确认一份合作单——范围、交付物、时间、报酬，白纸黑字。之后在协作空间沟通、传文件、保存每一个中间版本。</p>
+      <ul class="feature-list">
+        <li><span class="ic" data-ic="clipboard"></span><div><b>合作确认单</b><p class="text-muted text-sm">双方逐项确认，任何修改都需重新确认</p></div></li>
+        <li><span class="ic" data-ic="layers"></span><div><b>版本管理</b><p class="text-muted text-sm">同一文件多次上传自动成为 v1、v2、v3，可回溯</p></div></li>
+        <li><span class="ic" data-ic="flag"></span><div><b>里程碑与结项</b><p class="text-muted text-sm">按节点推进，双方确认后结项并互评</p></div></li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 网络图 ================= -->
+<section class="block" style="padding-bottom:60px">
+  <div class="container">
+    <div class="sec-head reveal" style="margin-bottom:10px">
+      <span class="eyebrow"><b>05</b> 连接</span>
+      <h2 class="h1">让能力，被<span class="hl">需要的人</span>看见</h2>
+    </div>
+    <div class="network" id="network"></div>
+  </div>
+</section>
+
+<!-- ================= 正在发生 ================= -->
+<section class="block" style="padding-top:40px">
+  <div class="container">
+    <div class="live-head reveal">
+      <div><span class="eyebrow"><span class="dot dot-pulse" style="color:var(--coral)"></span>正在发生</span><h2 class="h1 mt-16">最新需求</h2></div>
+      <div class="tabs" id="liveTabs"><button data-tab="" class="active">全部</button><button data-tab="teach">教我做</button><button data-tab="help">帮我做</button><button data-tab="together">一起做</button></div>
+    </div>
+    <div class="grid grid-3" id="livePosts"></div>
+    <div class="mt-32" style="text-align:center"><a href="explore.html" class="btn btn-ghost btn-lg">查看全部需求 <span data-ic="arrowRight"></span></a></div>
+  </div>
+</section>
+
+<!-- ================= CTA ================= -->
+<section style="padding:40px 0 20px">
+  <div class="container">
+    <div class="cta-band reveal-scale">
+      <div class="cta-rings" id="ctaRings"></div>
+      <span class="logo" data-logo style="justify-content:center;color:#fff;font-size:26px"></span>
+      <h2 class="h1 mt-24">你的下一个搭档，可能就在隔壁宿舍</h2>
+      <p>用学校邮箱注册，一分钟发布你的第一个需求。</p>
+      <div class="hero-cta" style="justify-content:center"><a href="login.html?register=1" class="btn btn-ghost btn-lg">免费注册</a><a href="explore.html" class="btn btn-lg" style="background:rgba(255,255,255,.14);color:#fff">先逛逛</a></div>
+    </div>
+  </div>
+</section>
+
+<script src="assets/js/config.js"></script>
+<script src="assets/js/mock-data.js"></script>
+<script src="assets/js/api.js"></script>
+<script src="assets/js/ui.js"></script>
+<script src="assets/js/pages/index.js"></script>
+</body>
+</html>

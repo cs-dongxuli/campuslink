@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>需求详情 · CampusLink</title>
+<link rel="stylesheet" href="assets/css/main.css">
+<style>
+  .post-main { padding: 32px; }
+  .post-main .title { font-size: 28px; font-weight: 800; line-height: 1.35; margin: 14px 0 18px; }
+  .meta-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 22px 0; }
+  .meta-grid > div { padding: 14px 16px; border-radius: 14px; background: var(--bg); }
+  .meta-grid .k { font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 5px; }
+  .meta-grid .k svg { width: 14px; height: 14px; }
+  .meta-grid .v { font-weight: 700; margin-top: 4px; }
+  .desc-body { white-space: pre-line; color: var(--ink-2); line-height: 1.85; font-size: 15px; }
+  .block-t { font-size: 15px; font-weight: 700; margin: 28px 0 12px; display: flex; align-items: center; gap: 8px; }
+  .block-t svg { width: 18px; height: 18px; color: var(--primary); }
+  .bullets li { display: flex; gap: 10px; padding: 6px 0; color: var(--ink-2); }
+  .bullets svg { width: 18px; height: 18px; color: var(--mint); flex: none; margin-top: 3px; }
+  .roles { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+  .role { padding: 14px; border-radius: 14px; border: 1.5px dashed var(--together); background: var(--together-bg); }
+  .role.filled { border-style: solid; border-color: var(--line); background: #fff; }
+  .role b { display: block; }
+  .action-card { padding: 24px; }
+  .action-card .price { font-size: 30px; }
+  .pf-pick { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .pf-pick label { position: relative; border-radius: 12px; overflow: hidden; border: 2px solid var(--line); cursor: pointer; transition: .2s; }
+  .pf-pick label .cv { aspect-ratio: 4/3; } .pf-pick label .cv svg { width: 100%; height: 100%; }
+  .pf-pick label .t { padding: 6px 8px; font-size: 12px; font-weight: 600; }
+  .pf-pick input { position: absolute; opacity: 0; }
+  .pf-pick input:checked + .box { position: absolute; inset: 0; border: 2px solid var(--primary); border-radius: 10px; background: rgba(47,91,255,.08); }
+  .pf-pick label:has(input:checked) { border-color: var(--primary); }
+  .pf-pick .chk { position: absolute; right: 6px; top: 6px; width: 22px; height: 22px; border-radius: 50%; background: #fff; border: 2px solid var(--line); display: grid; place-items: center; color: #fff; }
+  .pf-pick label:has(input:checked) .chk { background: var(--primary); border-color: var(--primary); }
+  .pf-pick .chk svg { width: 13px; height: 13px; }
+  @media (max-width: 760px) { .meta-grid { grid-template-columns: 1fr 1fr; } .pf-pick { grid-template-columns: 1fr 1fr; } }
+</style>
+</head>
+<body>
+<main class="page">
+  <div class="container">
+    <div class="breadcrumb"><a href="explore.html">广场</a><span data-ic="chevronRight"></span><a id="bcMode" href="#"></a><span data-ic="chevronRight"></span><span>需求详情</span></div>
+    <div class="layout-side" id="root"><div class="card skeleton" style="height:520px"></div><div class="card skeleton" style="height:300px"></div></div>
+  </div>
+</main>
+<script src="assets/js/config.js"></script>
+<script src="assets/js/mock-data.js"></script>
+<script src="assets/js/api.js"></script>
+<script src="assets/js/ui.js"></script>
+<script>
+(async function () {
+  const U = CL.ui; const { $, $$, qs, icon, esc, avatar, modeBadge, fmtBudget, fmtDate, timeAgo, daysLeft, toast, modal, MODES, statusBadge, cover } = U;
+  const me = await U.mountHeader({});
+  U.hydrate();
+  const pid = qs('id');
+  let p;
+  try { p = await CL.api.posts.get(pid); } catch (e) { $('#root').innerHTML = U.emptyState('alert', '需求不存在或已删除', '', '<a class="btn btn-primary" href="explore.html">回到广场</a>'); return; }
+  U.setTitle(p.title);
+  $('#bcMode').textContent = MODES[p.mode].name; $('#bcMode').href = 'explore.html?mode=' + p.mode;
+  const a = p.author;
+  const dl = daysLeft(p.deadline);
+  const LOC = { online: '线上', offline: '线下', either: '线上 / 线下' };
+
+  function actionHtml() {
+    if (!me) return `<a class="btn btn-primary btn-lg btn-block" href="login.html?next=${encodeURIComponent('post.html?id=' + p.id)}">登录后申请</a>`;
+    if (p.isOwner) return `<a class="btn btn-primary btn-lg btn-block" href="applicants.html?post=${p.id}">${icon('users')}查看申请者（${p.applicantCount}）</a>
+      <div class="row gap-8 mt-12"><a class="btn btn-ghost grow" href="publish.html?edit=${p.id}">${icon('edit')}编辑</a>${p.status === 'open' ? `<button class="btn btn-danger grow" id="closeBtn">关闭招募</button>` : ''}</div>`;
+    if (p.myCollabId) return `<a class="btn btn-primary btn-lg btn-block" href="confirm.html?id=${p.myCollabId}">${icon('clipboard')}进入合作</a>`;
+    const ma = p.myApplication;
+    if (ma && ma.status === 'pending') return `<div class="card-pad-sm" style="background:var(--primary-50);border-radius:14px"><div class="row fw-700 text-primary">${icon('clock')}已申请，等待对方回复</div><p class="text-xs text-muted mt-4">${timeAgo(ma.createdAt)}提交 · 对方查看你的履历后会通知你</p></div><button class="btn btn-ghost btn-block mt-12" id="withdrawBtn">撤回申请</button>`;
+    if (ma && ma.status === 'rejected') return `<div class="card-pad-sm" style="background:var(--bg);border-radius:14px" class="text-muted">很遗憾，这次没有被录用。看看其它需求吧～</div>`;
+    if (p.status !== 'open') return `<button class="btn btn-ghost btn-lg btn-block" disabled>已停止招募</button>`;
+    return `<button class="btn btn-primary btn-lg btn-block" id="applyBtn">${icon('send')}${MODES[p.mode].verb}，申请参与</button><p class="text-xs text-muted mt-8" style="text-align:center">你的个人主页与所选作品会一并发送给发起人</p>`;
+  }
+
+  $('#root').innerHTML = `
+    <article class="card post-main reveal">
+      <div class="row gap-8">${modeBadge(p.mode)}${statusBadge('post', p.status)}${p.category ? `<span class="tag tag-sm">${esc(p.category)}</span>` : ''}</div>
+      <h1 class="title">${esc(p.title)}</h1>
+      <div class="row text-sm text-muted">${avatar(a, 'sm')}<a href="profile.html?id=${a.id}" class="fw-600" style="color:var(--ink)">${esc(a.name)}</a><span>·</span><span>${timeAgo(p.createdAt)}发布</span><span>·</span><span>${p.viewCount} 次浏览</span></div>
+      <div class="meta-grid">
+        <div><div class="k">${icon('wallet')}${p.mode === 'together' ? '回报' : '预算'}</div><div class="v">${fmtBudget(p.budget)}</div></div>
+        <div><div class="k">${icon('calendar')}截止日期</div><div class="v">${fmtDate(p.deadline)}${dl !== null && dl >= 0 ? `<span class="text-xs ${dl <= 3 ? 'text-coral' : 'text-muted'}"> · 剩 ${dl} 天</span>` : ''}</div></div>
+        <div><div class="k">${icon('mapPin')}合作方式</div><div class="v">${LOC[p.location] || '线上'}</div></div>
+        <div><div class="k">${icon('users')}已申请</div><div class="v">${p.applicantCount} 人</div></div>
+      </div>
+      ${p.mode === 'together' && p.event ? `<div class="card-pad-sm row" style="background:var(--together-bg);border-radius:14px;color:var(--together)">${icon('trophy')}<b>${esc(p.event)}</b><span class="text-sm" style="margin-left:auto">团队 ${p.teamSize || '-'} 人</span></div>` : ''}
+      ${p.mode === 'teach' && p.sessionMinutes ? `<div class="card-pad-sm row" style="background:var(--teach-bg);border-radius:14px;color:var(--teach)">${icon('clock')}<b>每次 ${p.sessionMinutes} 分钟${p.sessions ? ` · 共约 ${p.sessions} 次` : ''}</b></div>` : ''}
+      <div class="block-t">${icon('file')}需求描述</div>
+      <div class="desc-body">${esc(p.description)}</div>
+      ${p.roles?.length ? `<div class="block-t">${icon('users')}招募角色</div><div class="roles">${p.roles.map((r) => `<div class="role ${r.filled ? 'filled' : ''}"><b>${esc(r.name)}</b><span class="text-xs ${r.filled ? 'text-muted' : ''}" style="${r.filled ? '' : 'color:var(--together)'}">${r.filled ? '✓ 已有成员' : '招募中'}</span></div>`).join('')}</div>` : ''}
+      ${p.requirements?.length ? `<div class="block-t">${icon('target')}对参与者的要求</div><ul class="bullets">${p.requirements.map((r) => `<li>${icon('check')}${esc(r)}</li>`).join('')}</ul>` : ''}
+      ${p.deliverables?.length ? `<div class="block-t">${icon('bag')}期望交付物</div><ul class="bullets">${p.deliverables.map((r) => `<li>${icon('check')}${esc(r)}</li>`).join('')}</ul>` : ''}
+      ${p.tags?.length ? `<div class="row gap-6 wrap mt-24">${p.tags.map((t) => `<span class="tag">#${esc(t)}</span>`).join('')}</div>` : ''}
+    </article>
+    <aside class="col gap-16 sticky">
+      <div class="card action-card reveal" style="--d:.1s">
+        <div class="text-sm text-muted">${p.mode === 'together' ? '回报' : '预算'}</div>
+        <div class="mt-4 mb-16">${fmtBudget(p.budget)}</div>
+        <div id="actionBox">${actionHtml()}</div>
+      </div>
+      <div class="card card-pad reveal" style="--d:.18s">
+        <div class="row">${avatar(a, 'md')}<div class="grow"><a class="fw-700 text-lg" href="profile.html?id=${a.id}">${esc(a.name)}</a><div class="text-sm text-muted">${esc(a.school)} · ${esc(a.major)}</div></div></div>
+        <div class="stat-row sm mt-16"><div class="stat"><b>${a.stats.rating.toFixed(1)}</b><span>评分</span></div><div class="stat"><b>${a.stats.completed}</b><span>合作</span></div><div class="stat"><b>${a.stats.goodRate}%</b><span>好评率</span></div></div>
+        <div class="row gap-6 text-xs text-muted mt-16"><span class="dot" style="color:var(--mint)"></span>通常 ${esc(a.responseTime)}回复</div>
+        <a class="btn btn-soft btn-block mt-16" href="profile.html?id=${a.id}">查看 TA 的主页</a>
+      </div>
+      <div class="card card-pad-sm reveal text-xs text-muted" style="--d:.24s"><div class="row fw-700 text-sm" style="color:var(--ink)">${icon('shieldCheck')}合作小贴士</div><p class="mt-8">录用后请先在平台上确认「合作单」，明确范围、交付物与报酬；过程文件请在协作空间内传输，方便留档与回溯。</p></div>
+    </aside>`;
+  U.reveal();
+
+  $('#closeBtn')?.addEventListener('click', async () => { if (await U.confirmDialog({ title: '关闭招募？', text: '关闭后将不再接收新的申请，已有申请不受影响。', okText: '关闭', danger: true })) { await CL.api.posts.close(p.id); toast('已关闭'); location.reload(); } });
+  $('#withdrawBtn')?.addEventListener('click', async () => { if (await U.confirmDialog({ title: '撤回申请？', text: '撤回后可以重新申请。' })) { await CL.api.applications.withdraw(p.myApplication.id); toast('已撤回'); location.reload(); } });
+  $('#applyBtn')?.addEventListener('click', openApply);
+
+  async function openApply() {
+    const works = await CL.api.portfolio.list(me.id);
+    const openRoles = (p.roles || []).filter((r) => !r.filled);
+    const m = modal({
+      title: '申请参与', sub: `「${esc(p.title)}」`, size: 'lg',
+      body: `<form id="applyForm" class="col gap-20">
+        <div class="row card-pad-sm" style="background:var(--bg);border-radius:14px">${avatar(me, 'md')}<div class="grow"><b>${esc(me.name)}</b><div class="text-xs text-muted">${esc(me.school)} · ${esc(me.major)} · 评分 ${me.stats.rating} · 完成 ${me.stats.completed} 次合作</div></div><a class="btn btn-text btn-sm" href="profile-edit.html" target="_blank">${icon('edit')}完善履历</a></div>
+        ${openRoles.length ? `<div class="field"><label>申请角色 <span class="req">*</span></label><div class="choice-group">${openRoles.map((r, i) => `<label class="choice"><input type="radio" name="role" value="${esc(r.name)}" ${i ? '' : 'checked'}><span>${esc(r.name)}</span></label>`).join('')}</div></div>` : ''}
+        <div class="field"><label>给发起人的话 <span class="req">*</span></label><textarea class="textarea" name="message" placeholder="简单介绍你为什么合适：相关经验、打算怎么做、多久能完成……（至少 10 个字）"></textarea></div>
+        <div class="form-grid">
+          ${p.mode !== 'together' && p.budget?.type !== 'free' ? `<div class="field"><label>你的报价</label><div class="input-group"><span data-ic="wallet"></span><input class="input" name="quote" type="number" min="0" placeholder="${p.budget?.min || ''}"><span class="suffix">${p.budget?.type === 'hourly' ? '元/小时' : p.budget?.type === 'per_session' ? '元/次' : '元'}</span></div><span class="hint">留空表示接受发起人预算</span></div>` : ''}
+          <div class="field ${p.mode === 'together' || p.budget?.type === 'free' ? 'full' : ''}"><label>可投入时间</label><input class="input" name="availableTime" placeholder="如：工作日晚上 / 每周 6 小时"></div>
+        </div>
+        <div class="field"><label>附上相关作品 <span class="text-muted text-xs">（最多 3 个）</span></label>
+          ${works.length ? `<div class="pf-pick">${works.map((w) => `<label><input type="checkbox" name="pf" value="${w.id}"><div class="cv">${cover(w.coverKind, w.coverSeed)}</div><div class="t ellipsis">${esc(w.title)}</div><span class="chk">${icon('check')}</span></label>`).join('')}</div>` : `<div class="text-sm text-muted">你还没有作品，<a class="text-primary" href="profile-edit.html">去添加</a>可以大大提高录用率。</div>`}
+        </div>
+      </form>`,
+      foot: `<button class="btn btn-ghost" data-close>取消</button><button class="btn btn-primary" id="submitApply">${icon('send')}提交申请</button>`,
+    });
+    U.hydrate(m.el);
+    $$('input[name="pf"]', m.el).forEach((c) => (c.onchange = () => { const on = $$('input[name="pf"]:checked', m.el); if (on.length > 3) { c.checked = false; toast('最多选择 3 个作品', 'info'); } }));
+    m.$('#submitApply').onclick = async (e) => {
+      const f = m.$('#applyForm'); const d = new FormData(f);
+      const data = { message: (d.get('message') || '').trim(), availableTime: d.get('availableTime') || '', role: d.get('role') || null, portfolioIds: d.getAll('pf'),
+        quote: d.get('quote') ? { type: p.budget?.type === 'negotiable' ? 'fixed' : p.budget.type, amount: +d.get('quote') } : null };
+      if (data.message.length < 10) { f.message.classList.add('invalid'); return toast('留言至少 10 个字', 'error'); }
+      e.currentTarget.disabled = true;
+      try { await CL.api.applications.create(p.id, data); m.close(); toast('申请已发送，等待对方回复'); setTimeout(() => location.reload(), 600); }
+      catch (err) { toast(err.message, 'error'); e.currentTarget.disabled = false; }
+    };
+  }
+  U.mountFooter();
+})();
+</script>
+</body>
+</html>

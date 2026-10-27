@@ -1,2 +1,7 @@
-# campuslink
-CampusLink classroom demo website using local sample data
+# CampusLink
+
+校园技能协作平台课堂演示网站，包含教我做、帮我做和一起做三种模式。
+
+首页统计为演示数据，操作保存在浏览器本地，不支持跨设备共享。
+
+GitHub Pages 从 main 分支根目录发布。

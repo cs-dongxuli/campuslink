@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>合作评价 · CampusLink</title>
+<link rel="stylesheet" href="assets/css/main.css">
+<style>
+  .rv-hero { text-align: center; padding: 10px 0 30px; }
+  .rv-hero .trophy { width: 84px; height: 84px; margin: 0 auto 18px; border-radius: 26px; background: linear-gradient(140deg, #ffd45c, #f5a524); display: grid; place-items: center; color: #fff; box-shadow: 0 16px 30px -12px #f5a524; animation: float 5s ease-in-out infinite; }
+  .rv-hero .trophy svg { width: 40px; height: 40px; }
+  .rv-card { padding: 32px; }
+  .big-stars { display: flex; justify-content: center; gap: 10px; margin: 14px 0 6px; }
+  .big-stars button { color: #e1e4ee; transition: transform .25s var(--ease-spring), color .15s; }
+  .big-stars button svg { width: 46px; height: 46px; }
+  .big-stars button.on { color: #f5b301; }
+  .big-stars button:hover { transform: scale(1.15) rotate(-6deg); }
+  .rate-label { text-align: center; font-weight: 800; font-size: 16px; min-height: 24px; color: #c27c00; }
+  .dims { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 26px 0; }
+  .dim { padding: 14px; border-radius: 16px; background: var(--bg); text-align: center; }
+  .dim .star-input { justify-content: center; margin-top: 8px; }
+  .dim .star-input button svg { width: 22px; height: 22px; }
+  .tag-pick { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+  .tag-pick button { height: 34px; padding: 0 14px; border-radius: 99px; border: 1px solid var(--line); background: #fff; font-size: 13px; font-weight: 600; transition: .2s var(--ease); }
+  .tag-pick button.on { background: var(--primary); border-color: var(--primary); color: #fff; transform: translateY(-1px); }
+  .blind { padding: 22px; border-radius: 18px; background: repeating-linear-gradient(-45deg, #fafbfe, #fafbfe 12px, #f3f5fb 12px, #f3f5fb 24px); text-align: center; color: var(--muted); }
+  .done-check { width: 72px; height: 72px; border-radius: 50%; background: var(--mint); color: #fff; display: grid; place-items: center; margin: 0 auto 14px; animation: popIn .6s var(--ease-spring); }
+  .done-check svg { width: 36px; height: 36px; }
+  @keyframes popIn { from { transform: scale(.3); opacity: 0; } }
+  @media (max-width: 700px) { .dims { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<main class="page">
+  <div class="container-sm" style="max-width:720px" id="root"></div>
+</main>
+<script src="assets/js/config.js"></script>
+<script src="assets/js/mock-data.js"></script>
+<script src="assets/js/api.js"></script>
+<script src="assets/js/ui.js"></script>
+<script>
+(async function () {
+  const U = CL.ui; const { $, $$, qs, icon, esc, avatar, stars, timeAgo, toast, fmtDate } = U;
+  await U.mountHeader({});
+  const me = await U.requireLogin();
+  const cid = qs('id');
+  const c = await CL.api.collabs.get(cid).catch(() => null);
+  if (!c) { $('#root').innerHTML = U.emptyState('lock', '无法访问该合作'); return; }
+  U.setTitle('合作评价');
+  if (c.status !== 'completed') { $('#root').innerHTML = `<div class="card">${U.emptyState('clock', '合作完成后才能评价', '双方确认结项后，这里会开放互评', `<a class="btn btn-primary" href="workspace.html?id=${c.id}">回到协作空间</a>`)}</div>`; return; }
+  const LABEL = ['', '不太满意', '一般', '还不错', '很满意', '超出预期！'];
+  const TAGS = ['沟通顺畅', '交付准时', '专业靠谱', '超出预期', '耐心细致', '需求清晰', '反馈及时', '审美在线', '技术过硬', '讲解清晰'];
+
+  async function render(justDone) {
+    const r = await CL.api.reviews.forCollab(cid);
+    const others = c.members.filter((m) => m.id !== me.id);
+    const pending = others.filter((o) => r.pendingFor.includes(o.id));
+    $('#root').innerHTML = `
+      <div class="rv-hero reveal"><div class="trophy">${icon('trophy')}</div><h1 class="h1">合作<span class="hl">完成</span>啦</h1><p class="lead mt-8">「${esc(c.title)}」· ${fmtDate(c.startedAt)} → ${fmtDate(c.completedAt)}</p></div>
+      <div class="col gap-20">
+        ${pending.map((o) => `<form class="card rv-card reveal" data-for="${o.id}">
+          <div class="row" style="justify-content:center;flex-direction:column;gap:8px">${avatar(o, 'lg')}<div class="text-muted text-sm">给 <b style="color:var(--ink)">${esc(o.name)}</b>（${esc(o.role)}）的评价</div></div>
+          <div class="big-stars" data-overall>${[1, 2, 3, 4, 5].map((i) => `<button type="button" data-v="${i}">${icon('star')}</button>`).join('')}</div>
+          <div class="rate-label" data-label>点击星星打分</div>
+          <div class="dims">${[['quality', '交付质量'], ['communication', '沟通配合'], ['punctuality', '按时守约']].map(([k, n]) => `<div class="dim"><div class="text-sm fw-600">${n}</div><div class="star-input" data-dim="${k}">${[1, 2, 3, 4, 5].map((i) => `<button type="button" data-v="${i}">${icon('star')}</button>`).join('')}</div></div>`).join('')}</div>
+          <div class="text-sm fw-600 mb-8" style="text-align:center">印象标签</div>
+          <div class="tag-pick">${TAGS.map((t) => `<button type="button">${t}</button>`).join('')}</div>
+          <textarea class="textarea mt-24" name="content" placeholder="说说这次合作的感受，会展示在对方主页上（至少 5 个字）"></textarea>
+          <div class="row-between mt-16"><span class="text-xs text-muted">${icon('lock').replace('<svg', '<svg style="width:13px;display:inline;vertical-align:-2px"')} 双盲互评：双方都提交后才会互相可见</span><button class="btn btn-primary" data-submit>${icon('send')}提交评价</button></div>
+        </form>`).join('')}
+        ${!pending.length ? `<div class="card rv-card reveal" style="text-align:center">${justDone ? `<div class="done-check">${icon('check')}</div>` : ''}<h3 class="h3">你已完成评价</h3><p class="text-muted text-sm mt-4">评价会沉淀为双方的合作信用。</p>${r.mine.map((x) => `<div class="mt-16">${stars(x.rating)}<p class="mt-8">${esc(x.content)}</p><div class="row gap-6 wrap mt-8" style="justify-content:center">${(x.tags || []).map((t) => `<span class="tag tag-sm">${esc(t)}</span>`).join('')}</div></div>`).join('')}</div>` : ''}
+        <div class="card rv-card reveal"><div class="section-title"><h3>${icon('star')}对方给你的评价</h3></div>
+          ${r.received.length ? r.received.map((x) => `<div class="row">${avatar(x.reviewer, 'sm')}<b class="text-sm">${esc(x.reviewer.name)}</b>${stars(x.rating)}<span class="text-xs text-muted" style="margin-left:auto">${timeAgo(x.createdAt)}</span></div><p class="mt-12">${esc(x.content)}</p><div class="row gap-6 wrap mt-8">${(x.tags || []).map((t) => `<span class="tag tag-sm">${esc(t)}</span>`).join('')}</div>`).join('<hr class="divider">') : `<div class="blind">${icon('lock').replace('<svg', '<svg style="width:28px;margin:0 auto 8px"')}<b>${pending.length ? '提交你的评价后，即可查看对方的评价' : '对方还没有提交评价'}</b><p class="text-xs mt-4">平台会在 7 天后自动公开已提交的评价</p></div>`}
+        </div>
+        <div class="row" style="justify-content:center"><a class="btn btn-ghost" href="dashboard.html">${icon('grid')}回到工作台</a><a class="btn btn-soft" href="workspace.html?id=${c.id}">${icon('folder')}查看合作存档</a></div>
+      </div>`;
+    U.reveal();
+    $$('form[data-for]').forEach(bindForm);
+  }
+  function bindForm(f) {
+    const st = { rating: 0, dims: { quality: 0, communication: 0, punctuality: 0 }, tags: [] };
+    const paint = (box, v) => $$('button', box).forEach((b) => b.classList.toggle('on', +b.dataset.v <= v));
+    const ov = $('[data-overall]', f);
+    $$('button', ov).forEach((b) => { b.onmouseenter = () => paint(ov, +b.dataset.v); b.onclick = () => { st.rating = +b.dataset.v; $('[data-label]', f).textContent = LABEL[st.rating]; Object.keys(st.dims).forEach((k) => { if (!st.dims[k]) { st.dims[k] = st.rating; paint($(`[data-dim="${k}"]`, f), st.rating); } }); }; });
+    ov.onmouseleave = () => paint(ov, st.rating);
+    $$('[data-dim]', f).forEach((box) => $$('button', box).forEach((b) => (b.onclick = () => { st.dims[box.dataset.dim] = +b.dataset.v; paint(box, +b.dataset.v); })));
+    $$('.tag-pick button', f).forEach((b) => (b.onclick = () => { b.classList.toggle('on'); st.tags = $$('.tag-pick button.on', f).map((x) => x.textContent); if (st.tags.length > 4) { b.classList.remove('on'); st.tags.pop(); toast('最多 4 个标签', 'info'); } }));
+    $('[data-submit]', f).onclick = async (e) => {
+      e.preventDefault();
+      const content = f.content.value.trim();
+      if (!st.rating) return toast('请先打分', 'error'); if (content.length < 5) return toast('评价内容至少 5 个字', 'error');
+      e.currentTarget.disabled = true;
+      try { await CL.api.reviews.submit(cid, { revieweeId: f.dataset.for, rating: st.rating, dims: st.dims, tags: st.tags, content }); toast('评价已提交，感谢！'); render(true); }
+      catch (err) { toast(err.message, 'error'); e.currentTarget.disabled = false; }
+    };
+  }
+  render();
+  U.mountFooter();
+})();
+</script>
+</body>
+</html>

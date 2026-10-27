@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>协作空间 · CampusLink</title>
+<link rel="stylesheet" href="assets/css/main.css">
+<style>
+  body { overflow: hidden; }
+  .ws { position: fixed; inset: calc(var(--header-h) + 14px) 0 14px; }
+  .ws .container { height: 100%; display: flex; flex-direction: column; gap: 14px; }
+  .ws-bar { padding: 14px 20px; display: flex; align-items: center; gap: 16px; flex: none; }
+  .ws-bar h1 { font-size: 18px; font-weight: 800; }
+  .ws-grid { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) 400px; gap: 14px; }
+  .chat { display: flex; flex-direction: column; min-height: 0; overflow: hidden; position: relative; }
+  .msgs { flex: 1; overflow-y: auto; padding: 22px 24px; display: flex; flex-direction: column; gap: 14px; scroll-behavior: smooth; }
+  .m { display: flex; gap: 10px; max-width: 76%; animation: rise .35s var(--ease); }
+  .m.me { align-self: flex-end; flex-direction: row-reverse; }
+  .m .b { padding: 11px 15px; border-radius: 18px; background: #f1f3f9; font-size: 14px; line-height: 1.6; border-top-left-radius: 6px; white-space: pre-wrap; word-break: break-word; }
+  .m.me .b { background: var(--primary); color: #fff; border-radius: 18px; border-top-right-radius: 6px; }
+  .m .t { font-size: 11px; color: var(--muted-2); margin-top: 4px; }
+  .m.me .t { text-align: right; }
+  .fmsg { display: flex; gap: 12px; align-items: center; padding: 12px 14px; border-radius: 16px; background: #fff; border: 1px solid var(--line); min-width: 280px; cursor: pointer; transition: .2s; }
+  .fmsg:hover { border-color: var(--primary-200); box-shadow: var(--sh-2); }
+  .fmsg .note { font-size: 13px; margin-top: 6px; color: var(--ink-2); }
+  .fic { width: 42px; height: 42px; border-radius: 12px; display: grid; place-items: center; flex: none; font-family: var(--font-num); font-weight: 800; font-size: 10.5px; color: #fff; letter-spacing: .02em; }
+  .sysm { align-self: center; font-size: 12px; color: var(--muted); background: var(--bg); padding: 5px 14px; border-radius: 99px; display: flex; gap: 6px; align-items: center; text-align: center; }
+  .sysm svg { width: 13px; height: 13px; color: var(--primary); }
+  .day { align-self: center; font-size: 11.5px; color: var(--muted-2); }
+  .typing { display: none; align-items: center; gap: 4px; padding: 8px 14px; background: #f1f3f9; border-radius: 14px; align-self: flex-start; margin: 0 24px 6px; }
+  .typing.on { display: inline-flex; }
+  .typing i { width: 6px; height: 6px; border-radius: 50%; background: var(--muted-2); animation: bounce 1s infinite; }
+  .typing i:nth-child(2) { animation-delay: .15s; } .typing i:nth-child(3) { animation-delay: .3s; }
+  @keyframes bounce { 0%, 60%, 100% { transform: none; } 30% { transform: translateY(-5px); } }
+  .composer { border-top: 1px solid var(--line); padding: 12px 14px; display: flex; gap: 10px; align-items: flex-end; flex: none; }
+  .composer textarea { flex: 1; border: 0; outline: 0; resize: none; max-height: 140px; min-height: 42px; padding: 10px 6px; font-size: 14px; line-height: 1.5; }
+  .drop-mask { position: absolute; inset: 0; background: rgba(47,91,255,.08); border: 2.5px dashed var(--primary); border-radius: var(--r-lg); display: none; place-items: center; color: var(--primary); font-weight: 800; font-size: 18px; z-index: 5; backdrop-filter: blur(2px); }
+  .chat.dragging .drop-mask { display: grid; }
+  .side { display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+  .side-head { padding: 14px 16px 0; flex: none; }
+  .side-body { flex: 1; overflow-y: auto; padding: 16px; }
+  .frow { display: flex; gap: 12px; align-items: center; padding: 11px 10px; border-radius: 14px; cursor: pointer; transition: .2s; }
+  .frow:hover { background: var(--bg); }
+  .frow .vb { font-family: var(--font-num); font-weight: 800; font-size: 11px; padding: 2px 7px; border-radius: 6px; background: var(--primary-50); color: var(--primary); }
+  .folder-t { font-size: 12px; color: var(--muted); font-weight: 700; margin: 14px 4px 4px; display: flex; gap: 6px; align-items: center; }
+  .folder-t svg { width: 14px; height: 14px; }
+  .vt { position: relative; padding-left: 34px; }
+  .vt::before { content: ""; position: absolute; left: 13px; top: 8px; bottom: 8px; width: 2px; background: var(--line); }
+  .vitem { position: relative; padding: 4px 0 18px; }
+  .vitem .vn { position: absolute; left: -34px; top: 2px; width: 28px; height: 28px; border-radius: 9px; background: #fff; border: 1.5px solid var(--line); display: grid; place-items: center; font-family: var(--font-num); font-weight: 800; font-size: 11px; color: var(--muted); }
+  .vitem.cur .vn { background: var(--primary); border-color: var(--primary); color: #fff; box-shadow: 0 0 0 4px var(--primary-50); }
+  .vitem .card-pad-sm { background: var(--bg); border-radius: 12px; margin-top: 8px; }
+  .ms { display: flex; gap: 12px; align-items: flex-start; padding: 12px; border-radius: 14px; transition: .2s; }
+  .ms:hover { background: var(--bg); }
+  .ms .cb { width: 24px; height: 24px; border-radius: 8px; border: 2px solid var(--line); display: grid; place-items: center; color: #fff; flex: none; transition: .25s var(--ease-spring); cursor: pointer; }
+  .ms.done .cb { background: var(--mint); border-color: var(--mint); transform: scale(1.05); }
+  .ms.done .tt { text-decoration: line-through; color: var(--muted); }
+  .ms .cb svg { width: 14px; height: 14px; }
+  .ring-big { width: 120px; height: 120px; margin: 4px auto 18px; position: relative; display: grid; place-items: center; }
+  .ring-big svg { position: absolute; inset: 0; transform: rotate(-90deg); }
+  .ring-big b { font-family: var(--font-num); font-size: 26px; font-weight: 800; }
+  .banner { padding: 12px 18px; border-radius: 16px; display: flex; align-items: center; gap: 12px; flex: none; }
+  .banner svg { width: 20px; height: 20px; flex: none; }
+  @media (max-width: 1000px) { body { overflow: auto; } .ws { position: static; padding-top: calc(var(--header-h) + 14px); } .ws-grid { grid-template-columns: 1fr; } .chat { height: 70vh; } }
+</style>
+</head>
+<body>
+<div class="ws">
+  <div class="container">
+    <div class="card ws-bar" id="bar"><div class="skeleton" style="height:36px;width:100%"></div></div>
+    <div id="banner"></div>
+    <div class="ws-grid">
+      <section class="card chat" id="chat">
+        <div class="msgs" id="msgs"></div>
+        <div class="typing" id="typing"><i></i><i></i><i></i></div>
+        <div class="composer">
+          <label class="icon-btn" title="上传文件 / 新版本" style="cursor:pointer"><span data-ic="paperclip"></span><input type="file" id="fileIn" hidden multiple></label>
+          <textarea id="input" rows="1" placeholder="输入消息，Enter 发送，Shift+Enter 换行"></textarea>
+          <button class="btn btn-primary" id="sendBtn" data-ic="send">发送</button>
+        </div>
+        <div class="drop-mask"><div style="text-align:center"><span data-ic="upload" style="display:block;width:40px;margin:0 auto 8px"></span>松开即可上传到协作空间</div></div>
+      </section>
+      <aside class="card side">
+        <div class="side-head"><div class="tabs" id="sTabs" style="display:flex"><button data-tab="files" class="active" style="flex:1;justify-content:center" data-ic="folder">文件</button><button data-tab="versions" style="flex:1;justify-content:center" data-ic="history">版本</button><button data-tab="milestones" style="flex:1;justify-content:center" data-ic="flag">进度</button></div></div>
+        <div class="side-body" id="sideBody"></div>
+      </aside>
+    </div>
+  </div>
+</div>
+<script src="assets/js/config.js"></script>
+<script src="assets/js/mock-data.js"></script>
+<script src="assets/js/api.js"></script>
+<script src="assets/js/ui.js"></script>
+<script>
+(async function () {
+  const U = CL.ui; const { $, $$, qs, icon, esc, avatar, modeBadge, statusBadge, fmtDate, fmtTime, timeAgo, fmtSize, toast, modal, tabs, emptyState } = U;
+  await U.mountHeader({});
+  const me = await U.requireLogin();
+  U.hydrate();
+  $('.demo-switch') && ($('.demo-switch').style.bottom = '90px');
+  const cid = qs('id');
+  let c, msgs = [], files = [], sideTab = 'files', verFile = null;
+  try { c = await CL.api.collabs.get(cid); } catch (e) { $('.ws-grid').innerHTML = `<div class="card" style="grid-column:1/-1">${emptyState('lock', e.message)}</div>`; return; }
+  if (c.status === 'confirming') { location.replace('confirm.html?id=' + cid); return; }
+  U.setTitle(c.title + ' · 协作空间');
+  const memberOf = (id) => c.members.find((m) => m.id === id);
+
+  const EXT = { pptx: ['#ff6b4a', 'PPT'], ppt: ['#ff6b4a', 'PPT'], docx: ['#2f5bff', 'DOC'], doc: ['#2f5bff', 'DOC'], pdf: ['#ef4444', 'PDF'], png: ['#1fb985', 'IMG'], jpg: ['#1fb985', 'IMG'], jpeg: ['#1fb985', 'IMG'], fig: ['#6a57ff', 'FIG'], zip: ['#3c4767', 'ZIP'], mp4: ['#0b9ee8', 'MP4'], xlsx: ['#14a874', 'XLS'], py: ['#f59e0b', 'PY'] };
+  const fic = (name) => { const e = (name.split('.').pop() || '').toLowerCase(); const [bg, t] = EXT[e] || ['#9aa1ba', e.slice(0, 3).toUpperCase() || 'FILE']; return `<span class="fic" style="background:${bg}">${t}</span>`; };
+
+  function renderBar() {
+    const meDone = !!c.completeRequests?.[me.id];
+    $('#bar').innerHTML = `<div class="grow"><div class="row gap-8">${modeBadge(c.mode)}${statusBadge('collab', c.status)}</div><h1 class="mt-4 ellipsis">${esc(c.title)}</h1></div>
+      <div class="avatar-stack">${c.members.map((m) => avatar(m, 'sm', { verified: false })).join('')}</div>
+      <div class="text-xs text-muted" style="max-width:160px">${c.members.map((m) => `${esc(m.name)} · ${esc(m.role)}`).join('<br>')}</div>
+      <a class="btn btn-ghost btn-sm" href="confirm.html?id=${c.id}">${icon('clipboard')}合作单 v${c.agreementVersion}</a>
+      ${c.status === 'active' ? `<button class="btn btn-dark btn-sm" id="completeBtn">${icon('flag')}申请结项</button>` : c.status === 'delivered' && !meDone ? `<button class="btn btn-success btn-sm" id="completeBtn">${icon('check')}确认验收</button>` : c.status === 'completed' ? `<a class="btn btn-primary btn-sm" href="review.html?id=${c.id}">${icon('star')}去评价</a>` : ''}`;
+    const b = $('#banner');
+    if (c.status === 'delivered') b.innerHTML = meDone ? `<div class="banner" style="background:#fff5e0;color:#a86b00">${icon('clock')}你已申请结项，等待其他成员确认验收。</div>` : `<div class="banner" style="background:var(--coral-bg);color:#c2410c">${icon('flag')}<div class="grow"><b>对方申请结项</b>，请检查交付物是否符合合作单。确认后合作完成并进入互评。</div><button class="btn btn-success btn-sm" data-complete>${icon('check')}确认验收</button></div>`;
+    else if (c.status === 'completed') b.innerHTML = `<div class="banner" style="background:var(--mint-bg);color:#0f7a56">${icon('award')}<div class="grow">合作已完成 🎉 协作空间已转为只读存档，文件仍可下载。</div><a class="btn btn-primary btn-sm" href="review.html?id=${c.id}">${icon('star')}写评价</a></div>`;
+    else if (c.members.some((m) => !c.confirmations[m.id])) b.innerHTML = `<div class="banner" style="background:#fff5e0;color:#a86b00">${icon('alert')}<div class="grow">有新成员尚未确认当前合作单。</div><a class="btn btn-ghost btn-sm" href="confirm.html?id=${c.id}">查看</a></div>`;
+    else b.innerHTML = '';
+    $$('#completeBtn, [data-complete]').forEach((x) => (x.onclick = complete));
+    const ro = c.status === 'completed';
+    $('#input').disabled = ro; $('#sendBtn').disabled = ro; $('#input').placeholder = ro ? '合作已结束，空间为只读' : '输入消息，Enter 发送，Shift+Enter 换行';
+  }
+  async function complete() {
+    const first = c.status === 'active';
+    if (!(await U.confirmDialog({ title: first ? '申请结项？' : '确认验收？', text: first ? '请确认交付物已全部上传。对方确认验收后，合作完成。' : '确认后合作完成，双方可以互相评价。', okText: first ? '申请结项' : '确认验收' }))) return;
+    c = await CL.api.collabs.complete(c.id); toast(c.status === 'completed' ? '合作完成！' : '已申请结项，等待对方验收');
+    renderBar(); await loadMsgs(); if (c.status === 'completed') setTimeout(() => (location.href = 'review.html?id=' + c.id), 1200);
+  }
+
+  /* ---------- 消息 ---------- */
+  function msgHtml(m, prev) {
+    let day = '';
+    const d = new Date(m.createdAt).toDateString();
+    if (!prev || new Date(prev.createdAt).toDateString() !== d) day = `<div class="day">${fmtDate(m.createdAt)}</div>`;
+    if (m.type === 'system') return day + `<div class="sysm">${icon('info')}${esc(m.content)}</div>`;
+    const mine = m.senderId === me.id, u = memberOf(m.senderId);
+    let body;
+    if (m.type === 'file') {
+      const f = files.find((x) => x.id === m.fileId); const v = f?.versions.find((x) => x.version === m.version) || f?.versions.slice(-1)[0];
+      body = `<div class="fmsg" data-open="${m.fileId}">${fic(f?.name || 'file')}<div class="grow"><div class="fw-700 text-sm ellipsis" style="max-width:240px">${esc(f?.name || '文件')}</div><div class="text-xs text-muted">v${m.version || 1} · ${v ? fmtSize(v.size) : ''}</div>${m.content ? `<div class="note">${esc(m.content)}</div>` : ''}</div><span class="vb" style="font-family:var(--font-num);font-weight:800;font-size:11px;padding:2px 7px;border-radius:6px;background:var(--primary-50);color:var(--primary)">v${m.version || 1}</span></div>`;
+    } else body = `<div class="b">${esc(m.content)}</div>`;
+    return day + `<div class="m ${mine ? 'me' : ''}">${avatar(u, 'sm', { verified: false })}<div>${body}<div class="t">${mine ? '' : esc(u?.name) + ' · '}${fmtTime(m.createdAt)}</div></div></div>`;
+  }
+  function renderMsgs() {
+    const box = $('#msgs');
+    box.innerHTML = msgs.map((m, i) => msgHtml(m, msgs[i - 1])).join('') || emptyState('chat', '打个招呼吧', '在这里沟通需求、发送文件');
+    $$('[data-open]', box).forEach((n) => (n.onclick = () => { verFile = n.dataset.open; sideT.set('versions'); }));
+    box.scrollTop = box.scrollHeight;
+  }
+  async function loadMsgs() { [msgs, files] = await Promise.all([CL.api.messages.list(cid), CL.api.files.list(cid)]); renderMsgs(); renderSide(); }
+
+  const input = $('#input');
+  input.addEventListener('input', () => { input.style.height = 'auto'; input.style.height = Math.min(140, input.scrollHeight) + 'px'; });
+  input.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); send(); } });
+  $('#sendBtn').onclick = send;
+  async function send() {
+    const t = input.value.trim(); if (!t) return;
+    input.value = ''; input.style.height = 'auto';
+    try { const m = await CL.api.messages.send(cid, { type: 'text', content: t }); msgs.push(m); renderMsgs(); } catch (e) { toast(e.message, 'error'); input.value = t; }
+  }
+
+  /* ---------- 上传（含版本） ---------- */
+  $('#fileIn').onchange = (e) => { [...e.target.files].forEach(uploadFlow); e.target.value = ''; };
+  const chat = $('#chat'); let dc = 0;
+  chat.addEventListener('dragenter', (e) => { e.preventDefault(); dc++; chat.classList.add('dragging'); });
+  chat.addEventListener('dragleave', () => { if (--dc <= 0) chat.classList.remove('dragging'); });
+  chat.addEventListener('dragover', (e) => e.preventDefault());
+  chat.addEventListener('drop', (e) => { e.preventDefault(); dc = 0; chat.classList.remove('dragging'); [...e.dataTransfer.files].forEach(uploadFlow); });
+
+  function uploadFlow(file, forceAsset) {
+    if (c.status === 'completed') return toast('合作已结束，无法上传', 'error');
+    if (file.size > CL_CONFIG.UPLOAD_MAX_MB * 1048576) return toast(`文件不能超过 ${CL_CONFIG.UPLOAD_MAX_MB}MB`, 'error');
+    const same = forceAsset ? files.find((f) => f.id === forceAsset) : files.find((f) => f.name === file.name);
+    const folders = [...new Set(files.map((f) => f.folder).concat(['设计稿', '资料', '交付物']))];
+    const m = modal({ title: '上传到协作空间', body: `<div class="row card-pad-sm" style="background:var(--bg);border-radius:14px">${fic(file.name)}<div class="grow"><b class="text-sm">${esc(file.name)}</b><div class="text-xs text-muted">${fmtSize(file.size)}</div></div></div>
+      ${same ? `<div class="field mt-16"><label>上传为</label><div class="choice-group"><label class="choice"><input type="radio" name="as" value="ver" checked><span>${icon('branch')}「${esc(same.name)}」的新版本 v${same.versions.length + 1}</span></label><label class="choice"><input type="radio" name="as" value="new"><span>${icon('file')}新文件</span></label></div></div>` : ''}
+      <div class="field mt-16" id="folderF" ${same ? 'style="display:none"' : ''}><label>文件夹</label><select class="select" id="folder">${folders.map((f) => `<option>${esc(f)}</option>`).join('')}</select></div>
+      <div class="field mt-16"><label>版本说明 <span class="text-xs text-muted">让对方知道这一版改了什么</span></label><textarea class="textarea" id="note" style="min-height:80px" placeholder="如：根据反馈调整了配色，新增 3 页信息图"></textarea></div>`,
+      foot: `<button class="btn btn-ghost" data-close>取消</button><button class="btn btn-primary" id="upOk">${icon('upload')}上传</button>` });
+    $$('input[name="as"]', m.el).forEach((r) => (r.onchange = () => (m.$('#folderF').style.display = r.value === 'new' ? '' : 'none')));
+    m.$('#upOk').onclick = async (e) => {
+      e.currentTarget.disabled = true; e.currentTarget.innerHTML = '<span class="spinner" style="width:16px;height:16px;border-color:rgba(255,255,255,.4);border-top-color:#fff"></span>上传中';
+      const asVer = same && m.$('input[name="as"]:checked')?.value !== 'new';
+      try { await CL.api.files.upload(cid, file, { fileId: asVer ? same.id : null, note: m.$('#note').value.trim(), folder: m.$('#folder').value }); m.close(); toast(asVer ? `已上传 v${same.versions.length + 1}` : '已上传'); await loadMsgs(); }
+      catch (err) { toast(err.message, 'error'); }
+    };
+  }
+
+  /* ---------- 侧栏 ---------- */
+  function renderSide() {
+    const B = $('#sideBody');
+    if (sideTab === 'files') {
+      if (!files.length) { B.innerHTML = emptyState('folder', '还没有文件', '拖拽文件到聊天区，或点击 📎 上传'); return; }
+      const groups = {}; files.forEach((f) => (groups[f.folder] = groups[f.folder] || []).push(f));
+      const pinned = files.filter((f) => f.pinned);
+      B.innerHTML = (pinned.length ? `<div class="folder-t">${icon('pin')}置顶</div>` + pinned.map(fileRow).join('') : '') + Object.entries(groups).map(([g, fs]) => `<div class="folder-t">${icon('folder')}${esc(g)} · ${fs.length}</div>${fs.map(fileRow).join('')}`).join('');
+      $$('[data-f]', B).forEach((n) => (n.onclick = (e) => { if (e.target.closest('[data-act]')) return; verFile = n.dataset.f; sideT.set('versions'); }));
+      $$('[data-act="pin"]', B).forEach((b) => (b.onclick = async () => { const f = files.find((x) => x.id === b.dataset.id); await CL.api.files.pin(cid, f.id, !f.pinned); await loadMsgs(); }));
+      $$('[data-act="ver"]', B).forEach((b) => (b.onclick = () => pickVersionFile(b.dataset.id)));
+    } else if (sideTab === 'versions') {
+      const f = files.find((x) => x.id === verFile) || files[0];
+      if (!f) { B.innerHTML = emptyState('history', '暂无版本记录'); return; }
+      verFile = f.id;
+      const vs = [...f.versions].reverse();
+      B.innerHTML = `<select class="select mb-16" id="verSel">${files.map((x) => `<option value="${x.id}" ${x.id === f.id ? 'selected' : ''}>${esc(x.name)}（${x.versions.length} 个版本）</option>`).join('')}</select>
+        <div class="row-between mb-16"><div class="row">${fic(f.name)}<div><b class="text-sm">${esc(f.name)}</b><div class="text-xs text-muted">当前 v${f.versions.length} · ${esc(f.folder)}</div></div></div>${c.status !== 'completed' ? `<button class="btn btn-soft btn-sm" data-act="ver" data-id="${f.id}">${icon('upload')}新版本</button>` : ''}</div>
+        <div class="vt">${vs.map((v, i) => { const u = memberOf(v.uploaderId); return `<div class="vitem ${i === 0 ? 'cur' : ''}"><span class="vn">v${v.version}</span><div class="row-between"><div><b class="text-sm">${i === 0 ? '当前版本' : '历史版本'}</b><div class="text-xs text-muted">${esc(u?.name)} · ${fmtDate(v.createdAt, true)} · ${fmtSize(v.size)}</div></div><a class="icon-btn" style="width:34px;height:34px" href="${esc(v.url)}" download="${esc(f.name)}" title="下载">${icon('download')}</a></div>${v.note ? `<div class="card-pad-sm text-sm">${esc(v.note)}</div>` : ''}</div>`; }).join('')}</div>`;
+      $('#verSel').onchange = (e) => { verFile = e.target.value; renderSide(); };
+      $$('[data-act="ver"]', B).forEach((b) => (b.onclick = () => pickVersionFile(b.dataset.id)));
+    } else {
+      const ms = c.agreement.milestones || []; const done = ms.filter((m) => m.done).length; const pct = ms.length ? Math.round((done / ms.length) * 100) : 0;
+      B.innerHTML = `<div class="ring-big"><svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="52" fill="none" stroke="var(--primary-50)" stroke-width="10"/><circle cx="60" cy="60" r="52" fill="none" stroke="var(--primary)" stroke-width="10" stroke-linecap="round" stroke-dasharray="327" stroke-dashoffset="${327 * (1 - pct / 100)}" style="transition:stroke-dashoffset 1s var(--ease)"/></svg><div style="text-align:center"><b>${pct}%</b><div class="text-xs text-muted">${done}/${ms.length} 完成</div></div></div>
+        ${ms.length ? ms.map((m) => `<div class="ms ${m.done ? 'done' : ''}"><span class="cb" data-ms="${m.id}">${icon('check')}</span><div class="grow"><div class="tt fw-600 text-sm">${esc(m.title)}</div><div class="text-xs text-muted">截止 ${fmtDate(m.due)}${m.doneAt ? ' · 完成于 ' + fmtDate(m.doneAt) : ''}</div></div>${!m.done && U.daysLeft(m.due) !== null && U.daysLeft(m.due) <= 1 ? '<span class="badge badge-coral">临近</span>' : ''}</div>`).join('') : emptyState('flag', '合作单中没有设置里程碑')}
+        <hr class="divider"><dl class="kv text-sm"><dt>周期</dt><dd>${fmtDate(c.agreement.startDate)} → ${fmtDate(c.agreement.endDate)}</dd><dt>交付物</dt><dd>${(c.agreement.deliverables || []).map(esc).join('<br>') || '—'}</dd><dt>报酬</dt><dd>${U.fmtBudget({ type: c.agreement.price.type, min: c.agreement.price.amount })}</dd></dl>`;
+      $$('[data-ms]', B).forEach((b) => (b.onclick = async () => { if (c.status === 'completed') return; const m = ms.find((x) => x.id === b.dataset.ms); c = await CL.api.collabs.toggleMilestone(cid, m.id, !m.done); await loadMsgs(); }));
+    }
+  }
+  function fileRow(f) { const v = f.versions[f.versions.length - 1]; const u = memberOf(v.uploaderId); return `<div class="frow" data-f="${f.id}">${fic(f.name)}<div class="grow" style="min-width:0"><div class="row gap-6"><b class="text-sm ellipsis">${esc(f.name)}</b><span class="vb">v${f.versions.length}</span></div><div class="text-xs text-muted">${esc(u?.name)} · ${timeAgo(v.createdAt)} · ${fmtSize(v.size)}</div></div><button class="icon-btn" style="width:32px;height:32px;${f.pinned ? 'color:var(--primary)' : ''}" data-act="pin" data-id="${f.id}" title="置顶">${icon('pin')}</button>${c.status !== 'completed' ? `<button class="icon-btn" style="width:32px;height:32px" data-act="ver" data-id="${f.id}" title="上传新版本">${icon('upload')}</button>` : ''}</div>`; }
+  function pickVersionFile(fid) { const inp = document.createElement('input'); inp.type = 'file'; inp.onchange = () => inp.files[0] && uploadFlow(inp.files[0], fid); inp.click(); }
+  const sideT = tabs($('#sTabs'), (k) => { sideTab = k; renderSide(); });
+
+  renderBar(); await loadMsgs();
+
+  /* ---------- 实时 ---------- */
+  CL.api.realtime.subscribe(cid, async (e) => {
+    if (e.type === 'typing' && e.data.userId !== me.id) { $('#typing').classList.add('on'); clearTimeout(window._ty); window._ty = setTimeout(() => $('#typing').classList.remove('on'), 4000); }
+    if (e.type === 'message') { $('#typing').classList.remove('on'); if (!msgs.some((m) => m.id === e.data.id)) { msgs.push(e.data); renderMsgs(); } }
+    if (e.type === 'refresh' || e.type === 'file' || e.type === 'collab') { c = await CL.api.collabs.get(cid); renderBar(); await loadMsgs(); }
+  });
+})();
+</script>
+</body>
+</html>

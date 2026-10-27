@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>合作确认单 · CampusLink</title>
+<link rel="stylesheet" href="assets/css/main.css">
+<style>
+  .life { padding: 18px 24px; margin-bottom: 22px; }
+  .doc { padding: 0; overflow: hidden; position: relative; }
+  .doc-head { padding: 28px 34px 22px; border-bottom: 1px dashed var(--line); position: relative; background: linear-gradient(180deg, #fbfcff, #fff); }
+  .doc-head .no { font-family: var(--font-num); color: var(--muted); font-size: 12px; letter-spacing: .08em; }
+  .doc-head h1 { font-size: 26px; font-weight: 900; margin: 6px 0 10px; }
+  .doc-sec { padding: 24px 34px; border-bottom: 1px solid var(--line-2); }
+  .doc-sec h3 { display: flex; align-items: center; gap: 10px; font-size: 15px; font-weight: 800; margin-bottom: 16px; }
+  .doc-sec h3 .n { width: 24px; height: 24px; border-radius: 8px; background: var(--primary); color: #fff; font-family: var(--font-num); font-size: 12px; display: grid; place-items: center; }
+  .parties { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .party { display: flex; gap: 12px; align-items: center; padding: 14px; border-radius: 14px; background: var(--bg); }
+  .ro { white-space: pre-line; color: var(--ink-2); line-height: 1.8; }
+  .ms-row { display: grid; grid-template-columns: 28px 1fr 150px 36px; gap: 10px; align-items: center; padding: 8px 0; }
+  .ms-row .i { width: 24px; height: 24px; border-radius: 50%; background: var(--primary-50); color: var(--primary); font-family: var(--font-num); font-weight: 800; font-size: 12px; display: grid; place-items: center; }
+  .li-row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
+  .sign { padding: 26px 34px 34px; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .sig { position: relative; height: 120px; border-radius: 16px; border: 1.5px dashed var(--line); display: flex; flex-direction: column; justify-content: flex-end; padding: 14px 16px; overflow: hidden; }
+  .sig .who { font-size: 13px; color: var(--muted); }
+  .stamp { position: absolute; right: 16px; top: 14px; width: 92px; height: 92px; border-radius: 50%; border: 3px solid var(--primary); color: var(--primary); display: grid; place-items: center; text-align: center; font-weight: 900; font-size: 15px; line-height: 1.2; transform: rotate(-14deg); opacity: .9; }
+  .stamp::before { content: ""; position: absolute; inset: 5px; border-radius: 50%; border: 1.5px solid var(--primary); }
+  .stamp small { display: block; font-size: 9.5px; font-weight: 600; font-family: var(--font-num); }
+  .stamp.anim { animation: stampIn .6s var(--ease-spring) both; }
+  @keyframes stampIn { 0% { transform: rotate(-14deg) scale(2.4); opacity: 0; } 60% { transform: rotate(-14deg) scale(.92); opacity: 1; } 100% { transform: rotate(-14deg) scale(1); } }
+  .sig .name { font-family: "Kaiti SC", "STKaiti", "KaiTi", serif; font-size: 28px; color: var(--ink); }
+  .sig.wait { background: repeating-linear-gradient(-45deg, #fafbfe, #fafbfe 10px, #f4f6fb 10px, #f4f6fb 20px); }
+  .status-card { padding: 22px; }
+  .mem { display: flex; align-items: center; gap: 10px; padding: 10px 0; }
+  .mem .st { margin-left: auto; }
+  .warn { padding: 12px 14px; border-radius: 12px; background: #fff7e6; color: #a86b00; font-size: 12.5px; display: flex; gap: 8px; }
+  .warn svg { width: 16px; height: 16px; flex: none; margin-top: 2px; }
+  .editing .doc-sec { background: #fcfdff; }
+  .edit-flag { position: absolute; right: 30px; top: 28px; }
+  @media (max-width: 760px) { .parties, .sign { grid-template-columns: 1fr; } .ms-row { grid-template-columns: 28px 1fr; } }
+</style>
+</head>
+<body>
+<main class="page">
+  <div class="container">
+    <div class="breadcrumb"><a href="dashboard.html">工作台</a><span data-ic="chevronRight"></span><span>合作确认单</span></div>
+    <div class="card life" id="life"></div>
+    <div class="layout-side">
+      <article class="card doc" id="doc"></article>
+      <aside class="col gap-16 sticky" id="side"></aside>
+    </div>
+  </div>
+</main>
+<script src="assets/js/config.js"></script>
+<script src="assets/js/mock-data.js"></script>
+<script src="assets/js/api.js"></script>
+<script src="assets/js/ui.js"></script>
+<script>
+(async function () {
+  const U = CL.ui; const { $, $$, qs, icon, esc, avatar, modeBadge, statusBadge, fmtDate, timeAgo, toast, MODES } = U;
+  await U.mountHeader({});
+  const me = await U.requireLogin();
+  U.hydrate();
+  const cid = qs('id');
+  let c, editing = false, ag, justSigned = false;
+
+  async function load() { c = await CL.api.collabs.get(cid); ag = JSON.parse(JSON.stringify(c.agreement)); render(); }
+
+  const PAY = { offline: '线下自行结算', platform: '平台担保支付（即将上线）', none: '无金钱报酬' };
+  const IP = { initiator: '归发起方所有', shared: '双方共同所有', executor: '归执行方所有，发起方获得使用权' };
+  const PRICE_T = { fixed: '一口价', hourly: '按小时', per_session: '按次', credit: '学分 / 综测加分', free: '免费 / 互助', negotiable: '面议' };
+
+  function lifecycle() {
+    const steps = [['check', '录用'], ['clipboard', '确认合作单'], ['chat', '协作中'], ['flag', '结项验收'], ['star', '互评']];
+    const idx = { confirming: 1, active: 2, delivered: 3, completed: 4, cancelled: 1 }[c.status];
+    $('#life').innerHTML = `<div class="stepper">${steps.map(([ic, t], i) => `<div class="step ${i < idx ? 'done' : i === idx ? 'active' : ''}"><span class="n">${i < idx ? icon('check') : icon(ic)}</span>${t}</div>${i < steps.length - 1 ? `<div class="step-line ${i < idx ? 'done' : ''}"></div>` : ''}`).join('')}</div>`;
+  }
+
+  function field(label, view, edit) { return `<div class="field"><label class="text-muted" style="font-weight:600;font-size:12.5px">${label}</label>${editing ? edit : `<div class="fw-600">${view}</div>`}</div>`; }
+  function render() {
+    lifecycle();
+    U.setTitle('合作确认单');
+    const canEdit = c.status === 'confirming';
+    const myRole = c.roles?.[me.id] || '';
+    $('#doc').className = 'card doc' + (editing ? ' editing' : '');
+    $('#doc').innerHTML = `
+      <div class="doc-head">
+        <div class="no">NO. CL-${c.id.toUpperCase()} · 版本 v${c.agreementVersion}</div>
+        ${editing ? `<input class="input mt-8" style="font-size:20px;font-weight:800;height:52px" data-f="title" value="${esc(ag.title)}">` : `<h1>${esc(ag.title)}</h1>`}
+        <div class="row gap-8 mt-8">${modeBadge(c.mode)}${statusBadge('collab', c.status)}<span class="text-xs text-muted">创建于 ${fmtDate(c.createdAt, true)}</span></div>
+        ${editing ? `<span class="badge badge-amber edit-flag">${icon('edit')}编辑中</span>` : ''}
+      </div>
+      <div class="doc-sec"><h3><span class="n">1</span>合作双方</h3>
+        <div class="parties">${c.members.map((m) => `<div class="party">${avatar(m, 'md')}<div class="grow"><b>${esc(m.name)}</b>${m.id === me.id ? '<span class="text-xs text-primary">（我）</span>' : ''}<div class="text-xs text-muted">${esc(m.school)} · ${esc(m.major)}</div></div><span class="tag tag-sm tag-blue">${esc(m.role || '')}</span></div>`).join('')}</div>
+        ${c.post ? `<div class="text-xs text-muted mt-12">来源需求：<a class="text-primary" href="post.html?id=${c.post.id}">${esc(c.post.title)}</a></div>` : ''}
+      </div>
+      <div class="doc-sec"><h3><span class="n">2</span>合作内容</h3>
+        ${field('工作范围 / 合作内容', `<div class="ro" style="font-weight:400">${esc(ag.scope) || '<span class="text-muted">未填写</span>'}</div>`, `<textarea class="textarea" data-f="scope" rows="4">${esc(ag.scope)}</textarea>`)}
+        <div class="mt-16">${field('交付物 / 成果', ag.deliverables.length ? `<ul class="col gap-6" style="font-weight:500">${ag.deliverables.map((d) => `<li class="row gap-8">${icon('check').replace('<svg', '<svg style="width:16px;color:var(--mint)"')}${esc(d)}</li>`).join('')}</ul>` : '<span class="text-muted">未填写</span>',
+          `<div id="delivList">${ag.deliverables.map((d, i) => `<div class="li-row"><input class="input" data-li="${i}" value="${esc(d)}"><button type="button" class="icon-btn" data-lrm="${i}" style="width:36px;height:36px">${icon('x')}</button></div>`).join('')}</div><button type="button" class="btn btn-soft btn-sm" id="addDeliv" style="align-self:flex-start">${icon('plus')}添加交付物</button>`)}</div>
+        ${c.mode === 'teach' ? `<div class="form-grid mt-16">${field('每次时长', `${ag.sessionMinutes || '-'} 分钟`, `<input class="input" type="number" data-f="sessionMinutes" value="${ag.sessionMinutes || ''}">`)}${field('次数', `${ag.sessions || '-'} 次`, `<input class="input" type="number" data-f="sessions" value="${ag.sessions || ''}">`)}</div>` : ''}
+      </div>
+      <div class="doc-sec"><h3><span class="n">3</span>时间与里程碑</h3>
+        <div class="form-grid">${field('开始日期', fmtDate(ag.startDate), `<input class="input" type="date" data-f="startDate" value="${(ag.startDate || '').slice(0, 10)}">`)}${field('截止日期', fmtDate(ag.endDate), `<input class="input" type="date" data-f="endDate" value="${(ag.endDate || '').slice(0, 10)}">`)}</div>
+        <div class="mt-16"><label class="text-muted" style="font-weight:600;font-size:12.5px">里程碑</label>
+          ${editing ? `<div id="msList">${ag.milestones.map((m, i) => `<div class="ms-row"><span class="i">${i + 1}</span><input class="input" data-ms="${i}.title" value="${esc(m.title)}" placeholder="节点名称"><input class="input" type="date" data-ms="${i}.due" value="${(m.due || '').slice(0, 10)}"><button type="button" class="icon-btn" data-msrm="${i}" style="width:36px;height:36px">${icon('x')}</button></div>`).join('')}</div><button type="button" class="btn btn-soft btn-sm mt-8" id="addMs">${icon('plus')}添加里程碑</button>`
+            : ag.milestones.length ? ag.milestones.map((m, i) => `<div class="ms-row"><span class="i">${m.done ? icon('check').replace('<svg', '<svg style="width:13px"') : i + 1}</span><span class="fw-600">${esc(m.title)}</span><span class="text-sm text-muted">${fmtDate(m.due)}</span><span></span></div>`).join('') : '<div class="text-muted text-sm mt-8">未设置里程碑（建议至少设置一个中期检查点）</div>'}
+        </div>
+      </div>
+      <div class="doc-sec"><h3><span class="n">4</span>报酬与结算</h3>
+        <div class="form-grid">
+          ${field('报酬方式', `${PRICE_T[ag.price.type] || ag.price.type}${['fixed', 'hourly', 'per_session'].includes(ag.price.type) ? ` · <span class="num" style="font-size:18px">¥${ag.price.amount}</span>` : ''}`, `<div class="row gap-8"><select class="select" data-f="price.type" style="width:150px">${Object.entries(PRICE_T).map(([k, n]) => `<option value="${k}" ${ag.price.type === k ? 'selected' : ''}>${n}</option>`).join('')}</select><div class="input-group grow"><input class="input" type="number" data-f="price.amount" value="${ag.price.amount || ''}" style="padding-left:14px"><span class="suffix">元</span></div></div>`)}
+          ${field('结算方式', PAY[ag.paymentMethod] || ag.paymentMethod, `<select class="select" data-f="paymentMethod">${Object.entries(PAY).map(([k, n]) => `<option value="${k}" ${ag.paymentMethod === k ? 'selected' : ''} ${k === 'platform' ? 'disabled' : ''}>${n}</option>`).join('')}</select>`)}
+          ${c.mode === 'help' ? field('免费修改次数', `${ag.revisions} 次`, `<input class="input" type="number" min="0" data-f="revisions" value="${ag.revisions}">`) : ''}
+          <div class="${c.mode === 'help' ? '' : 'full'}">${field('结算 / 分配说明', esc(ag.paymentNote) || '<span class="text-muted">—</span>', `<input class="input" data-f="paymentNote" value="${esc(ag.paymentNote)}" placeholder="如：定稿后转账；奖金按贡献平分">`)}</div>
+        </div>
+      </div>
+      <div class="doc-sec"><h3><span class="n">5</span>其他约定</h3>
+        <div class="form-grid">
+          ${field('成果归属', IP[ag.ipOwnership], `<select class="select" data-f="ipOwnership">${Object.entries(IP).map(([k, n]) => `<option value="${k}" ${ag.ipOwnership === k ? 'selected' : ''}>${n}</option>`).join('')}</select>`)}
+          ${field('沟通方式', esc(ag.communication), `<input class="input" data-f="communication" value="${esc(ag.communication)}">`)}
+          ${field('保密要求', ag.confidentiality ? '需保密，不得对外公开过程资料' : '无特别要求', `<label class="row"><span class="switch"><input type="checkbox" data-f="confidentiality" ${ag.confidentiality ? 'checked' : ''}><i></i></span>需要保密</label>`)}
+          <div class="full">${field('补充条款', esc(ag.extraTerms) || '<span class="text-muted">—</span>', `<textarea class="textarea" data-f="extraTerms" rows="3" placeholder="例如：署名顺序、违约处理、交付格式……">${esc(ag.extraTerms)}</textarea>`)}</div>
+        </div>
+      </div>
+      <div class="sign">${c.members.map((m) => { const t = c.confirmations[m.id]; return `<div class="sig ${t ? '' : 'wait'}"><div class="name">${t ? esc(m.name) : ''}</div><div class="who">${esc(m.role || '')} · ${esc(m.name)}${t ? ` · ${fmtDate(t, true)}` : ' · 待确认'}</div>${t ? `<div class="stamp ${justSigned && m.id === me.id ? 'anim' : ''}"><div>已确认<small>v${c.agreementVersion}</small><small>${fmtDate(t).slice(2)}</small></div></div>` : ''}</div>`; }).join('')}</div>`;
+
+    // 侧栏
+    const mineOk = !!c.confirmations[me.id];
+    const allOk = c.members.every((m) => c.confirmations[m.id]);
+    $('#side').innerHTML = `
+      <div class="card status-card">
+        <div class="section-title"><h3>${icon('clipboard')}确认状态</h3><span class="badge badge-blue">v${c.agreementVersion}</span></div>
+        ${c.members.map((m) => `<div class="mem">${avatar(m, 'sm', { verified: false })}<div><b class="text-sm">${esc(m.name)}</b><div class="text-xs text-muted">${esc(m.role || '')}</div></div><span class="st">${c.confirmations[m.id] ? `<span class="badge badge-mint">${icon('check')}已确认</span>` : '<span class="badge badge-amber">待确认</span>'}</span></div>`).join('')}
+        <div class="mt-16">${
+          c.status === 'cancelled' ? `<div class="warn">${icon('alert')}合作已取消${c.cancelReason ? '：' + esc(c.cancelReason) : ''}</div>` :
+          c.status !== 'confirming' ? `<a class="btn btn-primary btn-block btn-lg" href="workspace.html?id=${c.id}">${icon('chat')}进入协作空间</a><p class="text-xs text-muted mt-8" style="text-align:center">合作已于 ${fmtDate(c.startedAt, true)} 开始，合作单已锁定</p>` :
+          editing ? `<button class="btn btn-primary btn-block btn-lg" id="saveAg">${icon('check')}保存修改</button><button class="btn btn-ghost btn-block mt-8" id="cancelEdit">放弃修改</button><div class="warn mt-12">${icon('alert')}保存后版本号 +1，所有人的确认都会失效，需要重新确认。</div>` :
+          mineOk ? `<button class="btn btn-ghost btn-block btn-lg" disabled>${icon('check')}我已确认，等待对方</button><button class="btn btn-text btn-block mt-8" id="editAg">${icon('edit')}发起修改</button>` :
+          `<button class="btn btn-primary btn-block btn-lg" id="confirmAg">${icon('pen')}确认合作单 v${c.agreementVersion}</button><button class="btn btn-ghost btn-block mt-8" id="editAg">${icon('edit')}修改内容</button><p class="text-xs text-muted mt-12">点击确认即表示你同意以上全部条款。${allOk ? '' : '双方都确认后，合作正式开始并开放协作空间。'}</p>`
+        }</div>
+      </div>
+      ${c.status === 'confirming' ? `<div class="card card-pad-sm"><div class="text-sm fw-700 row gap-6">${icon('info')}确认前请注意</div><ul class="text-xs text-muted mt-8 col gap-6"><li>· 交付物与截止时间是否具体、可验收？</li><li>· 报酬金额与结算时间是否写清楚？</li><li>· 如需多轮修改，是否约定了次数？</li></ul><button class="btn btn-text btn-sm mt-12" id="cancelCollab" style="color:var(--red)">${icon('x')}取消这次合作</button></div>` : ''}
+      ${c.status !== 'confirming' && c.status !== 'cancelled' ? `<a class="btn btn-ghost btn-block" href="#" onclick="print();return false">${icon('download')}打印 / 导出 PDF</a>` : ''}`;
+    bind();
+    U.hydrate();
+  }
+
+  function bind() {
+    // 编辑态数据绑定
+    $$('[data-f]').forEach((n) => (n.oninput = n.onchange = () => { const path = n.dataset.f.split('.'); let o = ag; while (path.length > 1) o = o[path.shift()]; o[path[0]] = n.type === 'checkbox' ? n.checked : n.type === 'number' ? +n.value : n.value; }));
+    $$('[data-li]').forEach((n) => (n.oninput = () => (ag.deliverables[+n.dataset.li] = n.value)));
+    $$('[data-lrm]').forEach((b) => (b.onclick = () => { ag.deliverables.splice(+b.dataset.lrm, 1); render(); }));
+    $('#addDeliv') && ($('#addDeliv').onclick = () => { ag.deliverables.push(''); render(); });
+    $$('[data-ms]').forEach((n) => (n.oninput = n.onchange = () => { const [i, k] = n.dataset.ms.split('.'); ag.milestones[+i][k] = n.value; }));
+    $$('[data-msrm]').forEach((b) => (b.onclick = () => { ag.milestones.splice(+b.dataset.msrm, 1); render(); }));
+    $('#addMs') && ($('#addMs').onclick = () => { ag.milestones.push({ id: 'm' + Date.now(), title: '', due: '', done: false }); render(); });
+
+    $('#editAg') && ($('#editAg').onclick = () => { editing = true; render(); scrollTo({ top: 0, behavior: 'smooth' }); });
+    $('#cancelEdit') && ($('#cancelEdit').onclick = () => { editing = false; ag = JSON.parse(JSON.stringify(c.agreement)); render(); });
+    $('#saveAg') && ($('#saveAg').onclick = async () => {
+      ag.deliverables = ag.deliverables.map((s) => s.trim()).filter(Boolean); ag.milestones = ag.milestones.filter((m) => m.title.trim());
+      if (!ag.title.trim()) return toast('请填写合作名称', 'error');
+      if (ag.endDate && ag.startDate && ag.endDate < ag.startDate) return toast('截止日期不能早于开始日期', 'error');
+      try { c = await CL.api.collabs.updateAgreement(c.id, ag, c.agreementVersion); ag = JSON.parse(JSON.stringify(c.agreement)); editing = false; toast(`已保存为 v${c.agreementVersion}，请双方重新确认`); render(); }
+      catch (e) { toast(e.message, 'error'); if (e.code === 1302) load(); }
+    });
+    $('#confirmAg') && ($('#confirmAg').onclick = async () => {
+      if (!(await U.confirmDialog({ title: `确认合作单 v${c.agreementVersion}？`, text: '确认后表示你同意全部条款。如果对方之后修改内容，你需要重新确认。', okText: '确认' }))) return;
+      try { c = await CL.api.collabs.confirm(c.id, c.agreementVersion); justSigned = true; render(); toast(c.status === 'active' ? '双方已确认，合作正式开始！' : '已确认，等待对方确认'); if (c.status === 'active') setTimeout(() => (location.href = 'workspace.html?id=' + c.id), 1800); }
+      catch (e) { toast(e.message, 'error'); load(); }
+    });
+    $('#cancelCollab') && ($('#cancelCollab').onclick = async () => { if (await U.confirmDialog({ title: '取消这次合作？', text: '取消后对方会收到通知，原需求会重新开放招募。', okText: '取消合作', danger: true })) { await CL.api.collabs.cancel(c.id, '发起人取消'); toast('已取消'); load(); } });
+  }
+
+  try { await load(); } catch (e) { $('#doc').innerHTML = U.emptyState('lock', e.message || '无法访问'); }
+  // 对方在其它标签页操作时自动刷新
+  CL.api.realtime.subscribe(cid, (e) => { if (!editing && (e.type === 'refresh' || e.type === 'collab')) load(); });
+})();
+</script>
+</body>
+</html>

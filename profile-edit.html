@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>编辑资料 · CampusLink</title>
+<link rel="stylesheet" href="assets/css/main.css">
+<style>
+  .side-nav a { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 12px; font-weight: 600; color: var(--ink-2); }
+  .side-nav a svg { width: 18px; height: 18px; color: var(--muted); }
+  .side-nav a:hover, .side-nav a.active { background: var(--primary-50); color: var(--primary); }
+  .side-nav a.active svg { color: var(--primary); }
+  .sec { padding: 28px; }
+  .sec > a[id] { display: block; position: relative; top: -100px; height: 0; }
+  .sec h2 { font-size: 18px; font-weight: 800; margin-bottom: 4px; }
+  .sec > p { color: var(--muted); font-size: 13px; margin-bottom: 22px; }
+  .avatar-up { display: flex; align-items: center; gap: 18px; }
+  .list-row { display: grid; gap: 10px; padding: 14px; border-radius: 14px; background: var(--bg); position: relative; }
+  .list-row .del { position: absolute; right: 10px; top: 10px; }
+  .svc-grid { grid-template-columns: 120px 1fr 130px 110px 110px; }
+  .exp-grid { grid-template-columns: 1fr 1fr 160px; }
+  .works-edit { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 14px; }
+  .add-work { border: 2px dashed var(--primary-200); border-radius: var(--r); display: grid; place-items: center; min-height: 190px; color: var(--primary); font-weight: 700; background: var(--primary-50); transition: .2s; }
+  .add-work:hover { background: var(--primary-100); }
+  .add-work svg { width: 28px; height: 28px; margin: 0 auto 6px; }
+  .work-card .ops { position: absolute; right: 8px; top: 8px; display: flex; gap: 6px; opacity: 0; transition: .2s; }
+  .work-card:hover .ops { opacity: 1; }
+  .work-card { position: relative; }
+  .ops button { width: 30px; height: 30px; border-radius: 9px; background: rgba(255,255,255,.95); display: grid; place-items: center; box-shadow: var(--sh-1); }
+  .ops svg { width: 15px; height: 15px; }
+  .cover-pick { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+  .cover-pick label { border-radius: 10px; overflow: hidden; border: 2px solid var(--line); cursor: pointer; aspect-ratio: 4/3; }
+  .cover-pick label svg { width: 100%; height: 100%; }
+  .cover-pick input { display: none; }
+  .cover-pick label:has(input:checked) { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-50); }
+  .drop { border: 2px dashed var(--line); border-radius: 14px; padding: 18px; text-align: center; color: var(--muted); cursor: pointer; transition: .2s; }
+  .drop:hover, .drop.over { border-color: var(--primary); background: var(--primary-50); color: var(--primary); }
+  .save-bar { position: sticky; bottom: 16px; z-index: 5; margin-top: 20px; padding: 14px 18px; display: flex; align-items: center; justify-content: space-between; }
+  @media (max-width: 900px) { .svc-grid, .exp-grid { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<main class="page">
+  <div class="container">
+    <div class="page-hero"><span class="eyebrow" data-ic="edit">我的资料</span><h1 class="h1 mt-16">让别人<span class="hl">一眼</span>看懂你</h1><p class="lead mt-8">你申请合作时，发起人会看到这里的全部内容。</p></div>
+    <div class="layout-side-l">
+      <nav class="card card-pad-sm side-nav sticky" id="sideNav">
+        <a href="#basic" class="active" data-ic="user">基本信息</a>
+        <a href="#services" data-ic="bag">可提供的服务</a>
+        <a href="#works" data-ic="image">作品集</a>
+        <a href="#resume" data-ic="award">经历与获奖</a>
+        <a href="#links" data-ic="link">外部链接</a>
+        <hr class="divider" style="margin:10px 0">
+        <a id="viewProfile" href="#" data-ic="eye">预览我的主页</a>
+      </nav>
+      <div class="col gap-20">
+        <form id="basicForm" class="card sec">
+          <a id="basic"></a>
+          <h2>基本信息</h2><p>真实的信息会让合作更顺利。学校与邮箱来自认证，不可修改。</p>
+          <div class="avatar-up mb-24"><span id="avPrev"></span><div><label class="btn btn-ghost btn-sm" data-ic="upload">上传头像<input type="file" accept="image/*" id="avFile" hidden></label><div class="text-xs text-muted mt-8">建议 400×400，JPG/PNG，≤ 2MB</div></div></div>
+          <div class="form-grid">
+            <div class="field"><label>昵称 / 姓名 <span class="req">*</span></label><input class="input" name="name"></div>
+            <div class="field"><label>学校</label><input class="input" name="school" disabled></div>
+            <div class="field"><label>专业</label><input class="input" name="major"></div>
+            <div class="field"><label>年级</label><select class="select" name="grade"><option>大一</option><option>大二</option><option>大三</option><option>大四</option><option>研一</option><option>研二</option><option>研三</option><option>博一</option><option>博二</option><option>博三</option><option>教师</option></select></div>
+            <div class="field full"><label>一句话介绍</label><textarea class="textarea" name="bio" maxlength="200" placeholder="你擅长什么？做过什么？想找什么样的合作？"></textarea></div>
+            <div class="field full"><label>技能标签 <span class="text-xs text-muted">回车添加，最多 10 个</span></label><div class="chip-input" id="skills"><input placeholder="如 Figma、Python、剪辑"></div></div>
+            <div class="field"><label>通常回复时间</label><select class="select" name="responseTime"><option>1 小时内</option><option>2 小时内</option><option>3 小时内</option><option>半天内</option><option>1 天内</option></select></div>
+          </div>
+        </form>
+
+        <section class="card sec"><a id="services"></a>
+          <h2>可提供的服务</h2><p>展示在主页侧栏，例如“1v1 作品集指导 ¥49/30 分钟”。别人可以直接据此邀请你。</p>
+          <div class="col gap-10" id="svcList" style="gap:10px"></div>
+          <button class="btn btn-soft btn-sm mt-12" id="addSvc" data-ic="plus">添加服务</button>
+        </section>
+
+        <section class="card sec"><a id="works"></a>
+          <div class="row-between"><div><h2>作品集</h2><p style="margin-bottom:22px;color:var(--muted);font-size:13px">申请合作时可以勾选附上。作品即时保存。</p></div></div>
+          <div class="works-edit" id="worksEdit"></div>
+        </section>
+
+        <section class="card sec"><a id="resume"></a>
+          <h2>经历与获奖</h2><p>实习、社团、项目、助教……</p>
+          <div class="col" style="gap:10px" id="expList"></div>
+          <button class="btn btn-soft btn-sm mt-12" id="addExp" data-ic="plus">添加经历</button>
+          <hr class="divider">
+          <div class="col" style="gap:10px" id="awardList"></div>
+          <button class="btn btn-soft btn-sm mt-12" id="addAward" data-ic="plus">添加获奖</button>
+        </section>
+
+        <section class="card sec"><a id="links"></a>
+          <h2>外部链接</h2><p>GitHub、站酷、B 站、个人网站等。</p>
+          <div class="col" style="gap:10px" id="linkList"></div>
+          <button class="btn btn-soft btn-sm mt-12" id="addLink" data-ic="plus">添加链接</button>
+        </section>
+
+        <div class="card-glass save-bar"><span class="text-sm text-muted" id="dirty">修改后记得保存</span><button class="btn btn-primary" id="saveBtn" data-ic="check">保存资料</button></div>
+      </div>
+    </div>
+  </div>
+</main>
+<script src="assets/js/config.js"></script>
+<script src="assets/js/mock-data.js"></script>
+<script src="assets/js/api.js"></script>
+<script src="assets/js/ui.js"></script>
+<script>
+(async function () {
+  const U = CL.ui; const { $, $$, icon, esc, avatar, cover, toast, modal, MODES } = U;
+  await U.mountHeader({});
+  const me = await U.requireLogin();
+  U.hydrate();
+  $('#viewProfile').href = 'profile.html?id=' + me.id;
+  const st = JSON.parse(JSON.stringify({ skills: me.skills || [], services: me.services || [], experiences: me.experiences || [], awards: me.awards || [], links: me.links || [], avatarUrl: me.avatarUrl || null }));
+  const f = $('#basicForm');
+  ['name', 'school', 'major', 'grade', 'bio', 'responseTime'].forEach((k) => f.elements[k] && (f.elements[k].value = me[k] || ''));
+  const renderAv = () => ($('#avPrev').innerHTML = avatar({ ...me, avatarUrl: st.avatarUrl, name: f.elements.name.value || me.name }, 'xl'));
+  renderAv(); f.elements.name.oninput = renderAv;
+  $('#avFile').onchange = async (e) => { const file = e.target.files[0]; if (!file) return; const r = await CL.api.uploads.upload(file, 'avatar'); st.avatarUrl = r.url; renderAv(); toast('头像已上传，保存后生效', 'info'); };
+
+  // skills chips
+  const sk = $('#skills'), si = $('input', sk);
+  const renderSk = () => { $$('.tag', sk).forEach((t) => t.remove()); st.skills.forEach((v, i) => si.insertAdjacentHTML('beforebegin', `<span class="tag">${esc(v)}<button type="button" data-i="${i}">${icon('x')}</button></span>`)); $$('.tag button', sk).forEach((b) => (b.onclick = () => { st.skills.splice(+b.dataset.i, 1); renderSk(); })); };
+  si.onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); const v = si.value.trim(); if (v && !st.skills.includes(v) && st.skills.length < 10) st.skills.push(v); si.value = ''; renderSk(); } };
+  renderSk();
+
+  // 通用列表编辑器
+  function listEditor(box, key, tpl, blank) {
+    const render = () => {
+      $(box).innerHTML = st[key].map((it, i) => `<div class="list-row">${tpl(it, i)}<button type="button" class="icon-btn del" data-del="${i}" style="width:32px;height:32px">${icon('trash')}</button></div>`).join('') || `<p class="text-sm text-muted">还没有内容</p>`;
+      $$(`${box} [data-k]`).forEach((n) => (n.oninput = n.onchange = () => { const [i, k, sub] = n.dataset.k.split('.'); if (sub) { st[key][i][k] = st[key][i][k] || {}; st[key][i][k][sub] = n.type === 'number' ? +n.value : n.value; } else st[key][i][k] = n.value; }));
+      $$(`${box} [data-del]`).forEach((b) => (b.onclick = () => { st[key].splice(+b.dataset.del, 1); render(); }));
+    };
+    render(); return () => { st[key].push(blank()); render(); };
+  }
+  $('#addSvc').onclick = listEditor('#svcList', 'services', (s, i) => `<div class="grid svc-grid" style="gap:10px;padding-right:40px">
+      <select class="select" data-k="${i}.mode">${Object.values(MODES).map((m) => `<option value="${m.key}" ${s.mode === m.key ? 'selected' : ''}>${m.name}</option>`).join('')}</select>
+      <input class="input" data-k="${i}.title" value="${esc(s.title)}" placeholder="服务名称，如 1v1 作品集指导">
+      <select class="select" data-k="${i}.price.type">${[['fixed', '一口价'], ['per_session', '按次'], ['hourly', '按小时'], ['credit', '学分/加分'], ['free', '免费'], ['negotiable', '面议']].map(([k, n]) => `<option value="${k}" ${s.price?.type === k ? 'selected' : ''}>${n}</option>`).join('')}</select>
+      <input class="input" type="number" data-k="${i}.price.min" value="${s.price?.min ?? ''}" placeholder="金额">
+      <input class="input" data-k="${i}.unit" value="${esc(s.unit || '')}" placeholder="单位，如 30分钟"></div>`, () => ({ id: 's' + Date.now(), mode: 'teach', title: '', price: { type: 'per_session', min: 0 }, unit: '' }));
+  $('#addExp').onclick = listEditor('#expList', 'experiences', (e, i) => `<div class="grid exp-grid" style="gap:10px;padding-right:40px"><input class="input" data-k="${i}.title" value="${esc(e.title)}" placeholder="职位 / 角色"><input class="input" data-k="${i}.org" value="${esc(e.org)}" placeholder="组织 / 公司 / 社团"><input class="input" data-k="${i}.period" value="${esc(e.period)}" placeholder="2025.09 - 至今"></div><textarea class="textarea" style="min-height:70px" data-k="${i}.desc" placeholder="做了什么、成果如何">${esc(e.desc)}</textarea>`, () => ({ id: 'e' + Date.now(), title: '', org: '', period: '', desc: '' }));
+  $('#addAward').onclick = listEditor('#awardList', 'awards', (a, i) => `<div class="grid" style="grid-template-columns:1fr 120px;gap:10px;padding-right:40px"><input class="input" data-k="${i}.title" value="${esc(a.title)}" placeholder="奖项 / 证书名称"><input class="input" data-k="${i}.year" value="${esc(a.year)}" placeholder="年份"></div>`, () => ({ title: '', year: '' }));
+  $('#addLink').onclick = listEditor('#linkList', 'links', (l, i) => `<div class="grid" style="grid-template-columns:160px 1fr;gap:10px;padding-right:40px"><input class="input" data-k="${i}.label" value="${esc(l.label)}" placeholder="名称，如 GitHub"><input class="input" data-k="${i}.url" value="${esc(l.url)}" placeholder="https://"></div>`, () => ({ label: '', url: '' }));
+
+  // 作品集（即时 CRUD）
+  async function renderWorks() {
+    const works = await CL.api.portfolio.list(me.id);
+    $('#worksEdit').innerHTML = `<button class="add-work" id="addWork"><div>${icon('plus')}添加作品</div></button>` + works.map((w) => `<div class="work-card"><div class="cover">${w.coverUrl ? `<img src="${esc(w.coverUrl)}" style="width:100%;height:100%;object-fit:cover">` : cover(w.coverKind, w.coverSeed)}</div><div class="body"><div class="fw-700 text-sm ellipsis">${esc(w.title)}</div><div class="text-xs text-muted ellipsis">${esc(w.description)}</div></div><div class="ops"><button data-edit="${w.id}" title="编辑">${icon('edit')}</button><button data-rm="${w.id}" title="删除">${icon('trash')}</button></div></div>`).join('');
+    $('#addWork').onclick = () => workModal();
+    $$('[data-edit]').forEach((b) => (b.onclick = () => workModal(works.find((w) => w.id === b.dataset.edit))));
+    $$('[data-rm]').forEach((b) => (b.onclick = async () => { if (await U.confirmDialog({ title: '删除作品？', text: '删除后不可恢复。', okText: '删除', danger: true })) { await CL.api.portfolio.remove(b.dataset.rm); toast('已删除'); renderWorks(); } }));
+  }
+  function workModal(w) {
+    const KINDS = ['app', 'poster', 'code', 'chart', 'video', 'shapes', 'doc', 'web', 'model'];
+    let upUrl = w?.coverUrl || null;
+    const m = modal({ title: w ? '编辑作品' : '添加作品', size: 'lg', body: `<form class="col gap-16" id="wf">
+      <div class="field"><label>标题 <span class="req">*</span></label><input class="input" name="t" value="${esc(w?.title || '')}" placeholder="作品名称"></div>
+      <div class="field"><label>描述</label><textarea class="textarea" name="d" placeholder="做了什么、用了什么工具、成果如何">${esc(w?.description || '')}</textarea></div>
+      <div class="form-grid"><div class="field"><label>标签（逗号分隔）</label><input class="input" name="tags" value="${esc((w?.tags || []).join(', '))}"></div><div class="field"><label>链接</label><input class="input" name="link" value="${esc(w?.link || '')}" placeholder="https://"></div></div>
+      <div class="field"><label>封面</label><label class="drop" id="drop">${icon('upload').replace('<svg', '<svg style="width:22px;height:22px;margin:0 auto 6px"')}<div>点击或拖拽上传封面图（可选）</div><div class="text-xs" id="upName">${upUrl ? '已上传' : ''}</div><input type="file" accept="image/*" hidden id="wfile"></label>
+        <div class="text-xs text-muted mt-8">或选择一个插画封面：</div><div class="cover-pick mt-8">${KINDS.slice(0, 5).map((k, i) => `<label><input type="radio" name="ck" value="${k}" ${(w?.coverKind || 'app') === k ? 'checked' : ''}>${cover(k, i)}</label>`).join('')}</div></div></form>`,
+      foot: `<button class="btn btn-ghost" data-close>取消</button><button class="btn btn-primary" id="wsave">${icon('check')}保存</button>` });
+    const file = m.$('#wfile'), drop = m.$('#drop');
+    const up = async (fl) => { const r = await CL.api.uploads.upload(fl, 'portfolio_cover'); upUrl = r.url; m.$('#upName').textContent = '已上传：' + fl.name; };
+    file.onchange = () => file.files[0] && up(file.files[0]);
+    drop.ondragover = (e) => { e.preventDefault(); drop.classList.add('over'); }; drop.ondragleave = () => drop.classList.remove('over');
+    drop.ondrop = (e) => { e.preventDefault(); drop.classList.remove('over'); e.dataTransfer.files[0] && up(e.dataTransfer.files[0]); };
+    m.$('#wsave').onclick = async () => {
+      const d = new FormData(m.$('#wf')); const title = d.get('t').trim(); if (!title) return toast('请填写标题', 'error');
+      const data = { title, description: d.get('d'), tags: d.get('tags').split(/[,，]/).map((s) => s.trim()).filter(Boolean), link: d.get('link'), coverKind: d.get('ck'), coverUrl: upUrl };
+      w ? await CL.api.portfolio.update(w.id, data) : await CL.api.portfolio.create(data);
+      m.close(); toast('作品已保存'); renderWorks();
+    };
+  }
+  renderWorks();
+
+  // 保存
+  $('#saveBtn').onclick = async (e) => {
+    const name = f.elements.name.value.trim(); if (!name) return toast('请填写昵称', 'error');
+    e.currentTarget.disabled = true;
+    try {
+      await CL.api.users.updateMe({ name, major: f.elements.major.value, grade: f.elements.grade.value, bio: f.elements.bio.value, responseTime: f.elements.responseTime.value, ...st, links: st.links.filter((l) => l.url), awards: st.awards.filter((a) => a.title), experiences: st.experiences.filter((x) => x.title), services: st.services.filter((s) => s.title) });
+      toast('资料已保存'); $('#dirty').textContent = '已保存 ✓';
+    } catch (err) { toast(err.message, 'error'); }
+    e.currentTarget.disabled = false;
+  };
+  // 侧栏高亮
+  const secs = ['basic', 'services', 'works', 'resume', 'links'].map((id) => document.getElementById(id));
+  addEventListener('scroll', () => { let cur = 'basic'; secs.forEach((s) => { if (s.getBoundingClientRect().top < 160) cur = s.id; }); $$('#sideNav a').forEach((a) => a.classList.toggle('active', a.getAttribute('href') === '#' + cur)); }, { passive: true });
+  U.reveal();
+})();
+</script>
+</body>
+</html>
